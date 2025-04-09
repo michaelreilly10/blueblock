@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stack Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 300px;
+            height: 500px;
+            background: linear-gradient(to bottom, #e0f7fa, #b2ebf2);
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        #background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.2)"/><circle cx="80" cy="30" r="4" fill="rgba(255,255,255,0.2)"/><circle cx="30" cy="70" r="3" fill="rgba(255,255,255,0.2)"/><circle cx="70" cy="80" r="2" fill="rgba(255,255,255,0.2)"/></svg>');
+            opacity: 0.3;
+            z-index: 0;
+        }
+        
+        .block {
+            position: absolute;
+            height: 25px; /* Changed from 40px to make blocks thinner */
+            background: linear-gradient(145deg, #4CAF50, #2E7D32);
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2;
+        }
+        
+        #current-block {
+            background: linear-gradient(145deg, #2196F3, #0d47a1);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        .perfect-block {
+            animation: pulse 0.5s;
+            background: linear-gradient(145deg, #FFC107, #FF9800) !important;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #FFC107;
+            pointer-events: none;
+            z-index: 3;
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 10px;
+        }
+        
+        #game-over h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        #final-score {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        
+        .button-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        #restart-button {
+            background: linear-gradient(145deg, #4CAF50, #2E7D32);
+        }
+        
+        #menu-button {
+            background: linear-gradient(145deg, #9E9E9E, #616161);
+        }
+        
+        .trim-animation {
+            position: absolute;
+            height: 25px; /* Changed from 40px to match new block height */
+            background: rgba(255, 0, 0, 0.3);
+            z-index: 1;
+            animation: fadeOut 0.5s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="background"></div>
+        <div id="score-display">Score: 0</div>
+        <div id="game-over">
+            <h1>Game Over!</h1>
+            <p id="final-score">Your score: 0</p>
+            <div class="button-container">
+                <button id="restart-button">Play Again</button>
+                <button id="menu-button">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const background = document.getElementById('background');
+        const scoreDisplay = document.getElementById('score-display');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        const menuButton = document.getElementById('menu-button');
+        
+        let score = 0;
+        let speed = 2;
+        let direction = 1;
+        let blockWidth = 100;
+        let currentLeft = 0;
+        let currentBlock;
+        let stackedBlocks = [];
+        let gameRunning = true;
+        let gameLoop;
+        let perfectCount = 0;
+        
+        function createBlock() {
+            const block = document.createElement('div');
+            block.className = 'block';
+            block.id = 'current-block';
+            block.style.width = blockWidth + 'px';
+            block.style.height = '25px'; // Changed from 40px
+            block.style.bottom = stackedBlocks.length * 25 + 'px'; // Changed from 40px
+            
+            if (stackedBlocks.length === 0) {
+                block.style.left = (gameContainer.offsetWidth/2 - blockWidth/2) + 'px';
+                currentLeft = gameContainer.offsetWidth/2 - blockWidth/2;
+            } else {
+                block.style.left = currentLeft + 'px';
+            }
+            
+            gameContainer.appendChild(block);
+            return block;
+        }
+        
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = color || `hsl(${Math.random() * 60 + 30}, 100%, 50%)`;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 1 + Math.random() * 3;
+                const lifetime = 800 + Math.random() * 400;
+                
+                gameContainer.appendChild(particle);
+                
+                let startTime = Date.now();
+                
+                function updateParticle() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / lifetime;
+                    
+                    if (progress >= 1) {
+                        gameContainer.removeChild(particle);
+                        return;
+                    }
+                    
+                    const distance = velocity * elapsed / 20;
+                    particle.style.left = x + Math.cos(angle) * distance + 'px';
+                    particle.style.top = y - Math.sin(angle) * distance + 'px';
+                    particle.style.opacity = 1 - progress;
+                    particle.style.transform = `scale(${1 - progress * 0.5})`;
+                    
+                    requestAnimationFrame(updateParticle);
+                }
+                
+                requestAnimationFrame(updateParticle);
+            }
+        }
+        
+        function showTrimAnimation(left, width, bottom) {
+            const trim = document.createElement('div');
+            trim.className = 'trim-animation';
+            trim.style.left = left + 'px';
+            trim.style.width = width + 'px';
+            trim.style.bottom = bottom + 'px';
+            gameContainer.appendChild(trim);
+            
+            setTimeout(() => {
+                if (trim.parentNode) gameContainer.removeChild(trim);
+            }, 500);
+        }
+        
+        function stackBlock() {
+            if (!gameRunning) return;
+            
+            const newBlock = document.createElement('div');
+            newBlock.className = 'block';
+            newBlock.style.height = '25px'; // Changed from 40px
+            
+            if (stackedBlocks.length === 0) {
+                newBlock.style.width = blockWidth + 'px';
+                newBlock.style.left = currentLeft + 'px';
+                newBlock.style.bottom = '0px';
+                gameContainer.appendChild(newBlock);
+                stackedBlocks.push(newBlock);
+                
+                createParticles(
+                    currentLeft + blockWidth/2, 
+                    gameContainer.offsetHeight - 12, // Adjusted for thinner blocks
+                    15,
+                    '#2196F3'
+                );
+                
+                gameContainer.removeChild(currentBlock);
+                currentLeft = gameContainer.offsetWidth/2 - blockWidth/2;
+                currentBlock = createBlock();
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                return;
+            }
+            
+            const prevBlock = stackedBlocks[stackedBlocks.length - 1];
+            const prevLeft = parseInt(prevBlock.style.left);
+            const prevWidth = parseInt(prevBlock.style.width);
+            const prevRight = prevLeft + prevWidth;
+            const currentRight = currentLeft + blockWidth;
+            
+            const overlapLeft = Math.max(prevLeft, currentLeft);
+            const overlapRight = Math.min(prevRight, currentRight);
+            const overlapWidth = overlapRight - overlapLeft;
+            
+            if (overlapWidth <= 0) {
+                endGame();
+                return;
+            }
+            
+            // Show trim animations for non-overlapping parts
+            if (currentLeft < prevLeft) {
+                showTrimAnimation(currentLeft, prevLeft - currentLeft, stackedBlocks.length * 25); // Changed from 40px
+            }
+            if (currentRight > prevRight) {
+                showTrimAnimation(prevRight, currentRight - prevRight, stackedBlocks.length * 25); // Changed from 40px
+            }
+            
+            // Check for perfect placement (center aligned)
+            const centerDiff = Math.abs((currentLeft + blockWidth/2) - (prevLeft + prevWidth/2));
+            const isPerfect = centerDiff < 5;
+            
+            newBlock.style.width = overlapWidth + 'px';
+            newBlock.style.left = overlapLeft + 'px';
+            newBlock.style.bottom = stackedBlocks.length * 25 + 'px'; // Changed from 40px
+            
+            if (isPerfect) {
+                newBlock.classList.add('perfect-block');
+                perfectCount++;
+                createParticles(
+                    overlapLeft + overlapWidth/2, 
+                    gameContainer.offsetHeight - (stackedBlocks.length * 25 + 12), // Adjusted for thinner blocks
+                    30,
+                    '#FFC107'
+                );
+                
+                // Small screen shake for perfect placement
+                gameContainer.style.transform = 'translateX(5px)';
+                setTimeout(() => {
+                    gameContainer.style.transform = 'translateX(-5px)';
+                    setTimeout(() => {
+                        gameContainer.style.transform = 'translateX(0)';
+                    }, 50);
+                }, 50);
+            } else {
+                perfectCount = 0;
+                createParticles(
+                    overlapLeft + overlapWidth/2, 
+                    gameContainer.offsetHeight - (stackedBlocks.length * 25 + 12), // Adjusted for thinner blocks
+                    10,
+                    '#4CAF50'
+                );
+            }
+            
+            gameContainer.appendChild(newBlock);
+            stackedBlocks.push(newBlock);
+            
+            gameContainer.removeChild(currentBlock);
+            blockWidth = overlapWidth;
+            currentLeft = overlapLeft;
+            currentBlock = createBlock();
+            
+            score++;
+            speed += 0.2;
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+        
+        function endGame() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            finalScoreDisplay.textContent = `Your score: ${score}`;
+            gameOverScreen.style.display = 'flex';
+            
+            // Explosion effect on game over
+            for (let i = 0; i < 50; i++) {
+                createParticles(
+                    currentLeft + blockWidth/2, 
+                    gameContainer.offsetHeight - (stackedBlocks.length * 25 + 12), // Adjusted for thinner blocks
+                    1,
+                    '#f44336'
+                );
+            }
+        }
+        
+        function resetGame() {
+            const blocks = document.querySelectorAll('.block, .particle, .trim-animation');
+            blocks.forEach(block => gameContainer.removeChild(block));
+            
+            score = 0;
+            speed = 2;
+            direction = 1;
+            blockWidth = 100;
+            currentLeft = gameContainer.offsetWidth/2 - blockWidth/2;
+            stackedBlocks = [];
+            gameRunning = true;
+            perfectCount = 0;
+            
+            scoreDisplay.textContent = `Score: ${score}`;
+            gameOverScreen.style.display = 'none';
+            
+            currentBlock = createBlock();
+            gameLoop = setInterval(updateGame, 20);
+        }
+        
+        function goToMenu() {
+            // You can implement your menu functionality here
+            window.location.href = "menu.html";
+            // For a real implementation, you might want to:
+            // 1. Hide the game container
+            // 2. Show a menu screen
+            // 3. Add options like "New Game", "Settings", etc.
+        }
+        
+        function updateGame() {
+            if (!gameRunning) return;
+            
+            currentLeft += speed * direction;
+            
+            if (currentLeft + blockWidth > gameContainer.offsetWidth) {
+                direction = -1;
+                currentLeft = gameContainer.offsetWidth - blockWidth;
+            } else if (currentLeft < 0) {
+                direction = 1;
+                currentLeft = 0;
+            }
+            
+            currentBlock.style.left = currentLeft + 'px';
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                stackBlock();
+            }
+        });
+        
+        gameContainer.addEventListener('click', () => {
+            stackBlock();
+        });
+        
+        restartButton.addEventListener('click', resetGame);
+        menuButton.addEventListener('click', goToMenu);
+        
+        resetGame();
+    </script>
+</body>
+</html>

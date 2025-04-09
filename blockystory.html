@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Journey: Back to the Blocky Planets</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+            overflow: hidden;
+        }
+        
+        /* Stars background */
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        
+        #player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #3498db;
+            border-radius: 4px;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            transition: all 0.1s ease-out;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
+        }
+        
+        .obstacle {
+            position: absolute;
+            z-index: 5;
+            box-shadow: 0 0 15px currentColor;
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        /* Standard rectangular obstacle */
+        .obstacle-rect {
+            border-radius: 5px;
+        }
+        
+        /* Circular obstacle */
+        .obstacle-circle {
+            border-radius: 50%;
+        }
+        
+        /* Triangular obstacle */
+        .obstacle-triangle {
+            width: 0;
+            height: 0;
+            background: none !important;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 50px solid currentColor;
+        }
+        
+        /* Hexagonal obstacle */
+        .obstacle-hexagon {
+            width: 50px;
+            height: 30px;
+            background: currentColor;
+            position: relative;
+        }
+        .obstacle-hexagon:before, .obstacle-hexagon:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+        }
+        .obstacle-hexagon:before {
+            bottom: 100%;
+            border-bottom: 15px solid currentColor;
+        }
+        .obstacle-hexagon:after {
+            top: 100%;
+            border-top: 15px solid currentColor;
+        }
+        
+        /* Rotating obstacle */
+        .obstacle-rotating {
+            border-radius: 5px;
+            animation: pulse 1.5s infinite alternate, rotate 3s infinite linear;
+        }
+        
+        /* Homing obstacle */
+        .obstacle-homing {
+            border-radius: 50%;
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        /* Circle planet enemy - special for chapter 3 */
+        .obstacle-circle-enemy {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff5555, #aa0000);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+            animation: pulse-red 1s infinite alternate;
+        }
+        
+        /* Black hole obstacle - chapter 4 */
+        .obstacle-blackhole {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #000000, #333333);
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.7);
+            animation: pulse-blackhole 2s infinite alternate;
+        }
+        
+        /* Event horizon - chapter 5 */
+        .obstacle-eventhorizon {
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #660066, #000000);
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.8);
+            animation: pulse-eventhorizon 1.5s infinite alternate;
+        }
+        
+        /* Singularity - chapter 5 */
+        .obstacle-singularity {
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #ffffff, #cccccc);
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.9);
+            animation: pulse-singularity 0.5s infinite alternate;
+        }
+        
+        /* Asteroid obstacle - chapter 2 */
+        .obstacle-asteroid {
+            border-radius: 20%;
+            background: linear-gradient(45deg, #8B4513, #A0522D);
+            box-shadow: 0 0 15px rgba(139, 69, 19, 0.7);
+            animation: pulse-asteroid 2s infinite alternate;
+        }
+
+        /* Alien ship - triangular shape */
+        .obstacle-alien-ship {
+            width: 0;
+            height: 0;
+            background: none !important;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 40px solid currentColor;
+            animation: pulse-alien 1s infinite alternate;
+        }
+
+        /* Alien queen - hexagonal shape */
+        .obstacle-alien-queen {
+            width: 60px;
+            height: 40px;
+            background: currentColor;
+            position: relative;
+            animation: pulse-alien 0.8s infinite alternate;
+        }
+        .obstacle-alien-queen:before, .obstacle-alien-queen:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+        }
+        .obstacle-alien-queen:before {
+            bottom: 100%;
+            border-bottom: 20px solid currentColor;
+        }
+        .obstacle-alien-queen:after {
+            top: 100%;
+            border-top: 20px solid currentColor;
+        }
+
+        /* Alien swarm - small circular enemies */
+        .obstacle-alien-swarm {
+            border-radius: 50%;
+            animation: pulse-alien-swarm 0.5s infinite alternate;
+        }
+
+        /* Alien mothership - large rectangular ship */
+        .obstacle-alien-mothership {
+            border-radius: 10px;
+            animation: pulse-alien 1.5s infinite alternate;
+            background: linear-gradient(45deg, currentColor, #000000) !important;
+        }
+
+        /* Alien projectile */
+        .alien-projectile {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            z-index: 6;
+        }
+        
+        @keyframes pulse-red {
+            from { transform: scale(1); box-shadow: 0 0 15px rgba(255, 0, 0, 0.7); }
+            to { transform: scale(1.1); box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        }
+        
+        @keyframes pulse-blackhole {
+            from { transform: scale(1); box-shadow: 0 0 20px rgba(0, 180, 255, 0.7); }
+            to { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 180, 255, 0.9); }
+        }
+        
+        @keyframes pulse-eventhorizon {
+            from { transform: scale(1); box-shadow: 0 0 30px rgba(255, 0, 255, 0.7); }
+            to { transform: scale(1.1); box-shadow: 0 0 50px rgba(255, 0, 255, 0.9); }
+        }
+        
+        @keyframes pulse-singularity {
+            from { transform: scale(1); box-shadow: 0 0 40px rgba(255, 255, 255, 0.7); }
+            to { transform: scale(1.2); box-shadow: 0 0 60px rgba(255, 255, 255, 1); }
+        }
+        
+        @keyframes pulse-asteroid {
+            from { transform: rotate(0deg) scale(1); }
+            to { transform: rotate(10deg) scale(1.1); }
+        }
+
+        /* Alien animations */
+        @keyframes pulse-alien {
+            from { transform: scale(1); opacity: 0.8; }
+            to { transform: scale(1.1); opacity: 1; }
+        }
+
+        @keyframes pulse-alien-swarm {
+            from { transform: scale(1); box-shadow: 0 0 5px currentColor; }
+            to { transform: scale(1.2); box-shadow: 0 0 15px currentColor; }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            from { transform: scale(1); opacity: 0.9; }
+            to { transform: scale(1.05); opacity: 1; }
+        }
+        
+        #score-display, #level-display, #mission-display, #chapter-display {
+            position: absolute;
+            color: white;
+            font-size: 18px;
+            z-index: 20;
+            text-shadow: 0 0 5px rgba(0, 180, 255, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        #score-display {
+            top: 10px;
+            left: 10px;
+        }
+        
+        #level-display {
+            top: 10px;
+            right: 10px;
+        }
+        
+        #mission-display {
+            bottom: 10px;
+            left: 10px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+        
+        #chapter-display {
+            top: 50px;
+            left: 10px;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(139, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.9) 100%);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        #level-complete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 100, 0, 0.8) 0%, rgba(0, 0, 0, 0.9) 100%);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        #chapter-complete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 50, 100, 0.9) 0%, rgba(0, 0, 0, 0.95) 100%);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+            animation: fadeIn 0.5s ease-out;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #opening-cutscene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 50, 0.9) 0%, rgba(0, 0, 0, 0.95) 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #opening-cutscene h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #00ffaa;
+            text-shadow: 0 0 15px rgba(0, 255, 170, 0.7);
+        }
+        
+        #opening-cutscene h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00B4FF;
+        }
+        
+        #opening-cutscene p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+        
+        #opening-cutscene img {
+            max-width: 400px;
+            max-height: 200px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.5);
+        }
+        
+        #chapter-complete h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #00ffaa;
+            text-shadow: 0 0 15px rgba(0, 255, 170, 0.7);
+        }
+        
+        #chapter-complete h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00B4FF;
+        }
+        
+        #chapter-complete p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+        
+        #chapter-complete img {
+            max-width: 400px;
+            max-height: 200px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.5);
+        }
+        
+        .block-family {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 300px;
+            margin: 20px 0;
+        }
+        
+        .block-member {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
+            animation: float 3s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        #game-over h1, #level-complete h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            animation: glitch 1s infinite alternate;
+        }
+        
+        #game-over h1 {
+            color: #ff5555;
+        }
+        
+        #level-complete h1 {
+            color: #00ffaa;
+        }
+        
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+            100% { text-shadow: 5px 0 red, -5px 0 cyan; }
+        }
+        
+        #game-over p, #level-complete p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #00B4FF, #0080FF);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 180, 255, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.8);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                transparent,
+                transparent,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent,
+                transparent,
+                transparent
+            );
+            transform: rotate(30deg);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -50%; }
+            100% { left: 150%; }
+        }
+        
+        #level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ffaa;
+            font-size: 36px;
+            text-align: center;
+            display: none;
+            z-index: 25;
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.7);
+            animation: zoomInOut 1.5s infinite alternate;
+        }
+        
+        @keyframes zoomInOut {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            100% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        .trail {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(52, 152, 219, 0.7);
+            pointer-events: none;
+            z-index: 9;
+        }
+        
+        .explosion {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(255,100,100,0.8) 0%, rgba(255,50,50,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            animation: explode 0.5s forwards;
+        }
+
+        .explosion-alien {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            animation: explode-alien 0.5s forwards;
+        }
+
+        @keyframes explode-alien {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; filter: hue-rotate(90deg); }
+        }
+        
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        #earth {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #1a66ff, #003399);
+            border-radius: 50%;
+            left: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(26, 102, 255, 0.8);
+        }
+        
+        #planet-goal {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff6600, #ff3300);
+            border-radius: 50%;
+            right: -50px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            box-shadow: 0 0 30px rgba(255, 102, 0, 0.8);
+            display: none;
+        }
+        
+        .level-planet {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 2;
+            box-shadow: 0 0 20px currentColor;
+            animation: float 4s infinite ease-in-out;
+        }
+        
+        #right-boundary {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 5px;
+            height: 100%;
+            background: rgba(0, 255, 170, 0.3);
+            z-index: 8;
+            display: none;
+        }
+        
+        #fullscreen-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Pause menu styles */
+        #pause-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #pause-menu h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #00B4FF;
+            text-shadow: 0 0 15px rgba(0, 180, 255, 0.7);
+        }
+
+        #pause-btn {
+            position: absolute;
+            top: 10px;
+            right: 100px;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* New button group style */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="stars" id="stars"></div>
+        <div id="earth"></div>
+        <div id="planet-goal"></div>
+        <div id="right-boundary"></div>
+        <div id="player"></div>
+        <div id="score-display">Distance: 0</div>
+        <div id="level-display">Level: 1</div>
+        <div id="chapter-display">Chapter: 1 - Escape</div>
+        <div id="mission-display">Mission: Escape Earth's gravity</div>
+        <div id="level-up">LEVEL COMPLETE!</div>
+        
+        <div id="game-over">
+            <h1>MISSION FAILED</h1>
+            <p id="final-score">Distance traveled: 0</p>
+            <button class="btn" id="restart-level-btn">Retry Mission</button>
+            <button class="btn" id="restart-chapter-btn">Restart Chapter</button>
+            <button class="btn" id="menu-btn">Abort Mission</button>
+        </div>
+        
+        <div id="level-complete">
+            <h1>MISSION ACCOMPLISHED!</h1>
+            <p id="final-distance">You made it home!</p>
+            <div class="block-family" id="block-family">
+                <!-- Blocks will be added here by JavaScript -->
+            </div>
+            <button class="btn" id="next-level-btn">Next Mission</button>
+            <button class="btn" id="menu-btn-2">Return Home</button>
+        </div>
+        
+        <div id="chapter-complete">
+            <!-- Content will be filled by JavaScript -->
+        </div>
+
+        <div id="opening-cutscene">
+            <h1>BLOCKY'S GREAT ESCAPE</h1>
+            <img src="https://images.unsplash.com/photo-1454789548928-9efd52dc4031?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Earth from space">
+            <h2>Mission Briefing</h2>
+            <p>Blocky is trapped on Earth!</p>
+            <p>Help him travel through space to get back home at Blocky Planet</p>
+            <p>Use arrow keys to move. Avoid obstacles and reach the right side of each level.</p>
+            <button class="btn" id="start-game-btn">Begin Mission</button>
+        </div>
+        
+        <!-- Pause Menu -->
+        <div id="pause-menu">
+            <h1>GAME PAUSED</h1>
+            <button class="btn" id="resume-btn">Resume Mission</button>
+            <button class="btn" id="restart-level-pause-btn">Restart Level</button>
+            <button class="btn" id="menu-pause-btn">Quit to Menu</button>
+        </div>
+        
+        <button id="pause-btn">Pause</button>
+        <button id="fullscreen-btn">Fullscreen</button>
+    </div>
+
+    <script>
+        // Game elements
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score-display');
+        const levelDisplay = document.getElementById('level-display');
+        const chapterDisplay = document.getElementById('chapter-display');
+        const missionDisplay = document.getElementById('mission-display');
+        const gameOverScreen = document.getElementById('game-over');
+        const levelCompleteScreen = document.getElementById('level-complete');
+        const chapterCompleteScreen = document.getElementById('chapter-complete');
+        const openingCutscene = document.getElementById('opening-cutscene');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalDistanceDisplay = document.getElementById('final-distance');
+        const restartLevelBtn = document.getElementById('restart-level-btn');
+        const restartChapterBtn = document.getElementById('restart-chapter-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const menuBtn2 = document.getElementById('menu-btn-2');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const levelUpMessage = document.getElementById('level-up');
+        const starsContainer = document.getElementById('stars');
+        const earth = document.getElementById('earth');
+        const planetGoal = document.getElementById('planet-goal');
+        const rightBoundary = document.getElementById('right-boundary');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const blockFamily = document.getElementById('block-family');
+        const pauseMenu = document.getElementById('pause-menu');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const restartLevelPauseBtn = document.getElementById('restart-level-pause-btn');
+        const menuPauseBtn = document.getElementById('menu-pause-btn');
+        
+        // Sound effects and background music
+        const sounds = {
+            levelComplete: new Audio('level_complete.wav'),
+            gameOver: new Audio('gameover.wav'),
+            chapterComplete: new Audio('victory.wav'),
+            alienShoot: new Audio('alien_shoot.wav'),
+            playerHit: new Audio('player_hit.wav')
+        };
+
+        // Background music
+        const bgMusic = new Audio('music.wav');
+        bgMusic.loop = true;
+        bgMusic.volume = 0.5;
+
+        // Set sound volumes
+        sounds.levelComplete.volume = 0.5;
+        sounds.gameOver.volume = 0.5;
+        sounds.chapterComplete.volume = 0.5;
+        sounds.alienShoot.volume = 0.3;
+        sounds.playerHit.volume = 0.5;
+        
+        // Game variables
+        let playerX = 20;
+        let playerY = window.innerHeight / 2;
+        let playerSpeed = 8;
+        let obstacles = [];
+        let alienProjectiles = [];
+        let obstacleSpeed = 3;
+        let score = 0;
+        let level = 1;
+        let chapter = 1;
+        let gameRunning = false; // Start with game not running
+        let frameCount = 0;
+        let keysPressed = {};
+        let completingLevel = false;
+        let lastTrailTime = 0;
+        let lastAlienShotTime = 0;
+        let levelPlanets = [];
+        let gameWidth = window.innerWidth;
+        let gameHeight = window.innerHeight;
+        const playerWidth = 40;
+        const playerHeight = 40;
+        let isPaused = false;
+        
+        // Chapter configuration
+        const chapters = [
+            {
+                title: "Escape from Earth",
+                levels: 5,
+                mission: "Escape Earth's gravity well",
+                cutscene: {
+                    title: "Chapter 1 Complete: Breaking Free",
+                    subtitle: "You've escaped Earth's gravity!",
+                    image: "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "Against all odds, you've broken free from Earth's gravitational pull. The blue marble shrinks behind you as you enter the asteroid belt. The journey to Blocky Planet has begun!",
+                    nextChapter: "Approach the Asteroid Belt"
+                },
+                obstacleTheme: "earth"
+            },
+            {
+                title: "Asteroid Belt",
+                levels: 6,
+                mission: "Navigate through the dangerous asteroid field",
+                cutscene: {
+                    title: "Chapter 2 Complete: Through the Belt",
+                    subtitle: "You survived the asteroid belt!",
+                    image: "https://images.unsplash.com/photo-1454789476662-53eb23ba5907?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "Maneuvering through the chaotic asteroid belt was no small feat. But now, you have to get past those ugly circles!",
+                    nextChapter: "Circle Planet"
+                },
+                obstacleTheme: "asteroid"
+            },
+            {
+                title: "Circle Planet",
+                levels: 7,
+                mission: "Avoid the bouncing circle enemies!",
+                cutscene: {
+                    title: "Chapter 3 Complete: Circles Defeated",
+                    subtitle: "Blocks > Circles",
+                    image: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "You've defeated the circle enemies! But now you need to get past a region of space warped by a black hole's immense gravity.",
+                    nextChapter: "Black Hole Approach"
+                },
+                obstacleTheme: "circle"
+            },
+            {
+                title: "Black Hole",
+                levels: 8,
+                mission: "Avoid the black holes and the circles",
+                cutscene: {
+                    title: "Chapter 4 Complete: Escape from Darkness",
+                    subtitle: "You outran the black hole's pull!",
+                    image: "https://images.unsplash.com/photo-1464802686167-b939a6910659?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "That was too close! The black hole nearly claimed you. Now, in the distance, you see it - the Blocky Planet! Just need to get past the aliens.",
+                    nextChapter: "Final Approach"
+                },
+                obstacleTheme: "blackhole"
+            },
+            {
+                title: "Alien Invasion",
+                levels: 10,
+                mission: "Get past the aliens and reach Blocky Planet",
+                cutscene: {
+                    title: "Epilogue: The Final Battle",
+                    subtitle: "You've defeated the alien armada!",
+                    image: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "Against all odds, you got past the aliens and reached Blocky Planet. Your fellow Blocks Welcome You! BUT THEY WANT YOU TO HELP PROTECT THEM, Will you do it?",
+                    nextChapter: "Defend Blocky Planet"
+                },
+                obstacleTheme: "final"
+            }
+        ];
+        
+        // Obstacle types with their properties
+        const obstacleTypes = {
+            earth: [
+                {
+                    name: "rect",
+                    class: "obstacle-rect",
+                    width: () => Math.floor(Math.random() * 60) + 30,
+                    height: () => Math.floor(Math.random() * 60) + 30,
+                    movement: "vertical", // Only vertical movement
+                    speedMultiplier: 1,
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 200}, 80%, 60%)` // Blueish
+                },
+                {
+                    name: "rect",
+                    class: "obstacle-rect",
+                    width: () => Math.floor(Math.random() * 80) + 40,
+                    height: () => Math.floor(Math.random() * 80) + 40,
+                    movement: "vertical", // Only vertical movement
+                    speedMultiplier: 1.2,
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 30}, 80%, 60%)` // Orange
+                }
+            ],
+            asteroid: [
+                {
+                    name: "asteroid",
+                    class: "obstacle-asteroid",
+                    width: () => Math.floor(Math.random() * 50) + 40,
+                    height: () => Math.floor(Math.random() * 50) + 40,
+                    movement: "diagonal",
+                    speedMultiplier: 1.3,
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 20}, 60%, 40%)` // Brown
+                },
+                {
+                    name: "asteroid",
+                    class: "obstacle-asteroid",
+                    width: () => Math.floor(Math.random() * 70) + 30,
+                    height: () => Math.floor(Math.random() * 70) + 30,
+                    movement: "bouncing",
+                    speedMultiplier: 1.1,
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 10}, 70%, 35%)` // Darker brown
+                }
+            ],
+            circle: [
+                {
+                    name: "circle-enemy",
+                    class: "obstacle-circle-enemy",
+                    width: () => 40,
+                    height: () => 40,
+                    movement: "bouncing",
+                    speedMultiplier: 1.5,
+                    color: () => `hsl(0, 80%, 60%)` // Red
+                },
+                {
+                    name: "circle-enemy",
+                    class: "obstacle-circle-enemy",
+                    width: () => 50,
+                    height: () => 50,
+                    movement: "bouncing",
+                    speedMultiplier: 1.2,
+                    color: () => `hsl(0, 80%, 60%)` // Red
+                }
+            ],
+            blackhole: [
+                {
+                    name: "blackhole",
+                    class: "obstacle-blackhole",
+                    width: () => 80,
+                    height: () => 80,
+                    movement: "gravitational",
+                    speedMultiplier: 0.8,
+                    color: () => `hsl(200, 80%, 10%)` // Very dark blue
+                },
+                {
+                    name: "blackhole",
+                    class: "obstacle-blackhole",
+                    width: () => 120,
+                    height: () => 120,
+                    movement: "gravitational",
+                    speedMultiplier: 0.5,
+                    color: () => `hsl(200, 80%, 5%)` // Nearly black
+                },
+                {
+                    name: "singularity",
+                    class: "obstacle-singularity",
+                    width: () => 20,
+                    height: () => 20,
+                    movement: "homing",
+                    speedMultiplier: 2.5,
+                    color: () => `hsl(0, 0%, 90%)` // White
+                },
+                {
+                    name: "eventhorizon",
+                    class: "obstacle-eventhorizon",
+                    width: () => 100,
+                    height: () => 100,
+                    movement: "spiral",
+                    speedMultiplier: 1.5,
+                    color: () => `hsl(300, 80%, 40%)` // Purple
+                }
+            ],
+            final: [
+                {
+                    name: "alien-ship",
+                    class: "obstacle-alien-ship",
+                    width: () => 60,
+                    height: () => 40,
+                    movement: "zigzag",
+                    speedMultiplier: 1.8,
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 120}, 80%, 50%)` // Greenish
+                },
+                {
+                    name: "alien-queen",
+                    class: "obstacle-alien-queen",
+                    width: () => 80,
+                    height: () => 80,
+                    movement: "homing",
+                    speedMultiplier: 1.2,
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 300}, 80%, 50%)` // Purple
+                },
+                {
+                    name: "alien-swarm",
+                    class: "obstacle-alien-swarm",
+                    width: () => 30,
+                    height: () => 30,
+                    movement: "swarming",
+                    speedMultiplier: 2.0,
+                    color: () => `hsl(${Math.floor(Math.random() * 120) + 60}, 80%, 50%)` // Yellow-green
+                },
+                {
+                    name: "alien-mothership",
+                    class: "obstacle-alien-mothership",
+                    width: () => 120,
+                    height: () => 80,
+                    movement: "horizontal",
+                    speedMultiplier: 0.8,
+                    color: () => `hsl(${Math.floor(Math.random() * 20) + 200}, 80%, 40%)` // Dark blue
+                }
+            ]
+        };
+        
+        // Get obstacle types for current chapter
+        function getObstacleTypesForChapter() {
+            const currentChapter = chapters[chapter - 1];
+            return obstacleTypes[currentChapter.obstacleTheme] || obstacleTypes.earth;
+        }
+        
+        // Create starry background
+        function createStars() {
+            const starCount = 300;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.width = `${Math.random() * 3 + 1}px`;
+                star.style.height = star.style.width;
+                star.style.opacity = Math.random();
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                starsContainer.appendChild(star);
+            }
+        }
+        
+        // Create decorative planets for the level
+        function createLevelPlanets() {
+            // Clear previous planets
+            levelPlanets.forEach(planet => {
+                if (planet.parentNode) {
+                    gameContainer.removeChild(planet);
+                }
+            });
+            levelPlanets = [];
+            
+            // Create 3-5 decorative planets for the level
+            const planetCount = Math.floor(Math.random() * 3) + 3;
+            for (let i = 0; i < planetCount; i++) {
+                const planet = document.createElement('div');
+                planet.className = 'level-planet';
+                
+                const size = Math.floor(Math.random() * 60) + 40;
+                const x = Math.floor(Math.random() * (gameWidth - 200)) + 150; // Avoid left side
+                const y = Math.floor(Math.random() * (gameHeight - 100)) + 50;
+                
+                // Random planet color
+                const hue = Math.floor(Math.random() * 360);
+                const color = `hsl(${hue}, 70%, 50%)`;
+                
+                planet.style.width = `${size}px`;
+                planet.style.height = `${size}px`;
+                planet.style.left = `${x}px`;
+                planet.style.top = `${y}px`;
+                planet.style.background = `radial-gradient(circle at 30% 30%, ${color}, ${darkenColor(color, 30)})`;
+                planet.style.color = color;
+                planet.style.boxShadow = `0 0 20px ${color}`;
+                
+                // Add some craters
+                planet.innerHTML = `
+                    <div style="position:absolute; width:${size/5}px; height:${size/5}px; background:rgba(0,0,0,0.3); border-radius:50%; top:${size/3}px; left:${size/4}px;"></div>
+                    <div style="position:absolute; width:${size/7}px; height:${size/7}px; background:rgba(0,0,0,0.3); border-radius:50%; top:${size/2}px; left:${size/1.5}px;"></div>
+                `;
+                
+                gameContainer.appendChild(planet);
+                levelPlanets.push(planet);
+            }
+        }
+        
+        // Create block family on victory screen
+        function createBlockFamily() {
+            blockFamily.innerHTML = '';
+            const familySize = 15;
+            const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#1abc9c', '#e67e22'];
+            
+            for (let i = 0; i < familySize; i++) {
+                const block = document.createElement('div');
+                block.className = 'block-member';
+                block.style.background = colors[Math.floor(Math.random() * colors.length)];
+                block.style.animationDelay = `${i * 0.1}s`;
+                blockFamily.appendChild(block);
+            }
+            
+            // Add the player block to the family
+            const playerBlock = document.createElement('div');
+            playerBlock.className = 'block-member';
+            playerBlock.style.background = '#3498db';
+            playerBlock.style.animationDelay = '0s';
+            playerBlock.style.transform = 'scale(1.2)';
+            blockFamily.appendChild(playerBlock);
+        }
+        
+        function darkenColor(color, percent) {
+            // Simple function to darken a color
+            return color.replace(/\d+/g, match => Math.max(0, parseInt(match) - percent));
+        }
+        
+        // Create an alien projectile
+        function createAlienProjectile(x, y, targetX, targetY) {
+            const projectile = document.createElement('div');
+            projectile.className = 'alien-projectile';
+            projectile.style.left = x + 'px';
+            projectile.style.top = y + 'px';
+            gameContainer.appendChild(projectile);
+            
+            // Calculate direction vector
+            const dx = targetX - x;
+            const dy = targetY - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const speed = 8;
+            
+            alienProjectiles.push({
+                element: projectile,
+                x: x,
+                y: y,
+                dx: dx / distance * speed,
+                dy: dy / distance * speed,
+                width: 8,
+                height: 8
+            });
+            
+            // Play shooting sound
+            sounds.alienShoot.currentTime = 0;
+            sounds.alienShoot.play();
+        }
+        
+        // Update alien projectiles
+        function updateAlienProjectiles() {
+            for (let i = alienProjectiles.length - 1; i >= 0; i--) {
+                const projectile = alienProjectiles[i];
+                projectile.x += projectile.dx;
+                projectile.y += projectile.dy;
+                
+                // Remove if off screen
+                if (projectile.x < 0 || projectile.x > gameWidth || 
+                    projectile.y < 0 || projectile.y > gameHeight) {
+                    gameContainer.removeChild(projectile.element);
+                    alienProjectiles.splice(i, 1);
+                    continue;
+                }
+                
+                projectile.element.style.left = projectile.x + 'px';
+                projectile.element.style.top = projectile.y + 'px';
+            }
+        }
+        
+        // Check for collisions with alien projectiles
+        function checkProjectileCollisions() {
+            const playerRect = {
+                x: playerX,
+                y: playerY,
+                width: playerWidth,
+                height: playerHeight
+            };
+            
+            for (let i = alienProjectiles.length - 1; i >= 0; i--) {
+                const projectile = alienProjectiles[i];
+                const projectileRect = {
+                    x: projectile.x,
+                    y: projectile.y,
+                    width: projectile.width,
+                    height: projectile.height
+                };
+                
+                if (
+                    playerRect.x < projectileRect.x + projectileRect.width &&
+                    playerRect.x + playerRect.width > projectileRect.x &&
+                    playerRect.y < projectileRect.y + projectileRect.height &&
+                    playerRect.y + playerRect.height > projectileRect.y
+                ) {
+                    // Collision detected
+                    createExplosion(playerX + playerWidth/2, playerY + playerHeight/2);
+                    gameContainer.removeChild(projectile.element);
+                    alienProjectiles.splice(i, 1);
+                    sounds.playerHit.play();
+                    gameOver();
+                    break;
+                }
+            }
+        }
+        
+        // Handle window resize
+        function handleResize() {
+            gameWidth = window.innerWidth;
+            gameHeight = window.innerHeight;
+            
+            // Reposition player
+            playerY = Math.min(playerY, gameHeight - playerHeight);
+            player.style.top = playerY + 'px';
+            
+            // Reposition Earth and goal planet
+            earth.style.top = '50%';
+            planetGoal.style.top = '50%';
+            
+            // Recreate stars and planets
+            starsContainer.innerHTML = '';
+            createStars();
+            createLevelPlanets();
+        }
+        
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                gameContainer.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.textContent = 'Fullscreen';
+            }
+        }
+        
+        // Toggle pause state
+        function togglePause() {
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                pauseMenu.style.display = 'flex';
+                gameRunning = false;
+                bgMusic.pause();
+                pauseBtn.textContent = 'Resume';
+            } else {
+                pauseMenu.style.display = 'none';
+                gameRunning = true;
+                bgMusic.play();
+                pauseBtn.textContent = 'Pause';
+            }
+        }
+        
+        // Show chapter cutscene
+        function showChapterCutscene() {
+            const currentChapter = chapters[chapter - 1];
+            const cutscene = currentChapter.cutscene;
+            
+            chapterCompleteScreen.innerHTML = `
+                <h1>${cutscene.title}</h1>
+                <h2>${cutscene.subtitle}</h2>
+                <img src="${cutscene.image}" alt="Chapter ${chapter} illustration">
+                <p>${cutscene.text}</p>
+                ${cutscene.nextChapter ? `<p>Next: <strong>${cutscene.nextChapter}</strong></p>` : ''}
+                <div class="button-group">
+                    <button class="btn" id="continue-btn">${chapter === chapters.length ? 'Return Home' : 'Continue Journey'}</button>
+                    ${chapter === chapters.length ? '<button class="btn" id="protect-btn">Protect Blocky Planet</button>' : ''}
+                </div>
+            `;
+            
+            chapterCompleteScreen.style.display = 'flex';
+            
+            // Play chapter complete sound
+            sounds.chapterComplete.currentTime = 0;
+            sounds.chapterComplete.play();
+            
+            document.getElementById('continue-btn').addEventListener('click', () => {
+                chapterCompleteScreen.style.display = 'none';
+                startNextChapter();
+            });
+            
+            // Add event listener for the new Protect button
+            const protectBtn = document.getElementById('protect-btn');
+            if (protectBtn) {
+                protectBtn.addEventListener('click', () => {
+                    window.location.href = 'spacebossmode 3.0.html';
+                });
+            }
+        }
+        
+        // Start the next chapter
+        function startNextChapter() {
+            chapter++;
+            level = 1;
+            
+            if (chapter > chapters.length) {
+                // Game completed!
+                resetGame();
+                return;
+            }
+            
+            // Update displays
+            chapterDisplay.textContent = `Chapter: ${chapter} - ${chapters[chapter - 1].title}`;
+            missionDisplay.textContent = `Mission: ${chapters[chapter - 1].mission}`;
+            levelDisplay.textContent = `Level: ${level}`;
+            
+            // Reset player position to left side
+            playerX = 20;
+            playerY = gameHeight / 2;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            
+            // Reset score for new chapter
+            score = 0;
+            scoreDisplay.textContent = `Distance: ${score}`;
+            
+            // Create new obstacles and planets for new chapter
+            createInitialObstacles();
+            createLevelPlanets();
+            
+            // Start game and music
+            gameRunning = true;
+            completingLevel = false;
+            bgMusic.play();
+        }
+        
+        // Create initial obstacles
+        function createInitialObstacles() {
+            const currentChapter = chapters[chapter - 1];
+            const baseObstacleCount = 3 + Math.floor(level / 2);
+            const additionalObstacles = Math.min(level, 5); // Max 5 additional obstacles
+            const obstacleCount = baseObstacleCount + additionalObstacles;
+            
+            for (let i = 0; i < obstacleCount; i++) {
+                createObstacle();
+            }
+        }
+        
+        // Create a new obstacle
+        function createObstacle() {
+            const availableTypes = getObstacleTypesForChapter();
+            const obstacleType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+            
+            const obstacleWidth = obstacleType.width();
+            const obstacleHeight = obstacleType.height();
+            
+            // Random position anywhere on screen
+            let obstacleX = Math.floor(Math.random() * (gameWidth - obstacleWidth));
+            let obstacleY = Math.floor(Math.random() * (gameHeight - obstacleHeight));
+            
+            // Create obstacle with type-specific color
+            const obstacle = document.createElement('div');
+            obstacle.className = `obstacle ${obstacleType.class}`;
+            obstacle.style.color = obstacleType.color();
+            obstacle.style.background = obstacleType.color();
+            
+            // Special handling for triangle (which uses borders)
+            if (obstacleType.name !== 'triangle') {
+                obstacle.style.width = obstacleWidth + 'px';
+                obstacle.style.height = obstacleHeight + 'px';
+            }
+            
+            obstacle.style.left = obstacleX + 'px';
+            obstacle.style.top = obstacleY + 'px';
+            gameContainer.appendChild(obstacle);
+            
+            // Additional properties for movement patterns
+            const directionX = Math.random() > 0.5 ? 1 : -1;
+            const directionY = Math.random() > 0.5 ? 1 : -1;
+            const startTime = Date.now();
+            const initialX = obstacleX;
+            const initialY = obstacleY;
+            
+            obstacles.push({
+                element: obstacle,
+                x: obstacleX,
+                y: obstacleY,
+                width: obstacleWidth,
+                height: obstacleHeight,
+                directionX: directionX,
+                directionY: directionY,
+                speed: obstacleSpeed * obstacleType.speedMultiplier,
+                movement: obstacleType.movement,
+                type: obstacleType.name,
+                lastUpdate: Date.now(),
+                startTime: startTime,
+                initialX: initialX,
+                initialY: initialY,
+                angle: 0, // For spiral movement
+                lastShotTime: 0 // For alien shooting
+            });
+        }
+        
+        // Create player trail effect
+        function createTrail() {
+            const now = Date.now();
+            if (now - lastTrailTime > 50) { // Create trail every 50ms
+                const trail = document.createElement('div');
+                trail.className = 'trail';
+                trail.style.left = (playerX + playerWidth/2 - 5) + 'px';
+                trail.style.top = (playerY + playerHeight/2 - 5) + 'px';
+                gameContainer.appendChild(trail);
+                
+                // Fade out and remove trail
+                setTimeout(() => {
+                    trail.style.opacity = '0';
+                    trail.style.transform = 'scale(1.5)';
+                    setTimeout(() => gameContainer.removeChild(trail), 300);
+                }, 100);
+                
+                lastTrailTime = now;
+            }
+        }
+        
+        // Create explosion effect
+        function createExplosion(x, y) {
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.style.left = (x - 30) + 'px';
+            explosion.style.top = (y - 30) + 'px';
+            gameContainer.appendChild(explosion);
+            
+            setTimeout(() => {
+                gameContainer.removeChild(explosion);
+            }, 500);
+        }
+        
+        // Alien ships shoot at player
+        function handleAlienShooting() {
+            if (chapter !== 5) return; // Only aliens in chapter 5
+            
+            const now = Date.now();
+            if (now - lastAlienShotTime < 1000) return; // Limit shooting rate
+            
+            lastAlienShotTime = now;
+            
+            // Find all alien ships that can shoot
+            const shootingAliens = obstacles.filter(obstacle => 
+                obstacle.type.includes('alien') && 
+                now - obstacle.lastShotTime > 2000 && // 2 second cooldown
+                Math.random() < 0.3 // 30% chance to shoot
+            );
+            
+            // Make them shoot at player
+            shootingAliens.forEach(alien => {
+                alien.lastShotTime = now;
+                const alienCenterX = alien.x + alien.width / 2;
+                const alienCenterY = alien.y + alien.height / 2;
+                const playerCenterX = playerX + playerWidth / 2;
+                const playerCenterY = playerY + playerHeight / 2;
+                
+                createAlienProjectile(alienCenterX, alienCenterY, playerCenterX, playerCenterY);
+            });
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            if (gameRunning && !completingLevel && !isPaused) {
+                updatePlayer();
+                updateObstacles();
+                updateAlienProjectiles();
+                checkCollisions();
+                checkProjectileCollisions();
+                checkLevelCompletion();
+                handleAlienShooting();
+                frameCount++;
+                
+                createTrail();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Update player position
+        function updatePlayer() {
+            let moved = false;
+            
+            if (keysPressed['ArrowLeft'] && playerX > 0) {
+                playerX -= playerSpeed;
+                if (playerX < 0) playerX = 0;
+                moved = true;
+            }
+            if (keysPressed['ArrowRight'] && playerX < gameWidth - playerWidth) {
+                playerX += playerSpeed;
+                if (playerX > gameWidth - playerWidth) playerX = gameWidth - playerWidth;
+                moved = true;
+            }
+            if (keysPressed['ArrowUp'] && playerY > 0) {
+                playerY -= playerSpeed;
+                if (playerY < 0) playerY = 0;
+                moved = true;
+            }
+            if (keysPressed['ArrowDown'] && playerY < gameHeight - playerHeight) {
+                playerY += playerSpeed;
+                if (playerY > gameHeight - playerHeight) playerY = gameHeight - playerHeight;
+                moved = true;
+            }
+            
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            
+            // Increase score based on right movement
+            if (keysPressed['ArrowRight']) {
+                increaseScore(1);
+            }
+        }
+        
+        // Update all obstacles
+        function updateObstacles() {
+            const now = Date.now();
+            let blackholePullActive = false;
+            
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                const deltaTime = (now - obstacle.lastUpdate) / 1000;
+                obstacle.lastUpdate = now;
+                
+                // Time since spawn for time-based patterns
+                const elapsed = (now - obstacle.startTime) / 1000;
+                
+                switch (obstacle.movement) {
+                    case 'vertical':
+                        obstacle.y += obstacle.speed * obstacle.directionY * deltaTime * 60;
+                        
+                        // Bounce off top/bottom walls
+                        if (obstacle.y <= 0) {
+                            obstacle.y = 0;
+                            obstacle.directionY = 1;
+                        } else if (obstacle.y >= gameHeight - obstacle.height) {
+                            obstacle.y = gameHeight - obstacle.height;
+                            obstacle.directionY = -1;
+                        }
+                        break;
+                        
+                    case 'horizontal':
+                        obstacle.x += obstacle.speed * obstacle.directionX * deltaTime * 60;
+                        
+                        // Bounce off left/right walls
+                        if (obstacle.x <= 0) {
+                            obstacle.x = 0;
+                            obstacle.directionX = 1;
+                        } else if (obstacle.x >= gameWidth - obstacle.width) {
+                            obstacle.x = gameWidth - obstacle.width;
+                            obstacle.directionX = -1;
+                        }
+                        break;
+                        
+                    case 'zigzag': // For alien ships
+                        obstacle.x += obstacle.speed * deltaTime * 60;
+                        obstacle.y = obstacle.initialY + Math.sin(elapsed * 2) * 100;
+                        
+                        // Bounce off top/bottom walls
+                        if (obstacle.y <= 0) {
+                            obstacle.y = 0;
+                            obstacle.initialY = 100;
+                        } else if (obstacle.y >= gameHeight - obstacle.height) {
+                            obstacle.y = gameHeight - obstacle.height;
+                            obstacle.initialY = gameHeight - obstacle.height - 100;
+                        }
+                        
+                        // Wrap around screen
+                        if (obstacle.x > gameWidth) {
+                            obstacle.x = -obstacle.width;
+                        }
+                        break;
+                        
+                    case 'diagonal': // For triangles
+                        obstacle.x += obstacle.speed * obstacle.directionX * deltaTime * 60 * 0.7;
+                        obstacle.y += obstacle.speed * obstacle.directionY * deltaTime * 60 * 0.7;
+                        
+                        // Bounce off walls
+                        if (obstacle.y <= 0) {
+                            obstacle.y = 0;
+                            obstacle.directionY = 1;
+                        } else if (obstacle.y >= gameHeight - obstacle.height) {
+                            obstacle.y = gameHeight - obstacle.height;
+                            obstacle.directionY = -1;
+                        }
+                        
+                        if (obstacle.x <= 0) {
+                            obstacle.x = 0;
+                            obstacle.directionX = 1;
+                        } else if (obstacle.x >= gameWidth - obstacle.width) {
+                            obstacle.x = gameWidth - obstacle.width;
+                            obstacle.directionX = -1;
+                        }
+                        break;
+                        
+                    case 'spiral': // For rotating squares
+                        obstacle.angle += deltaTime * 2;
+                        const radius = 50 + elapsed * 10;
+                        obstacle.x = obstacle.initialX + Math.cos(obstacle.angle) * radius;
+                        obstacle.y = obstacle.initialY + Math.sin(obstacle.angle) * radius;
+                        
+                        // Bounce off walls
+                        if (obstacle.x <= 0 || obstacle.x >= gameWidth - obstacle.width) {
+                            obstacle.directionX *= -1;
+                        }
+                        if (obstacle.y <= 0 || obstacle.y >= gameHeight - obstacle.height) {
+                            obstacle.directionY *= -1;
+                        }
+                        break;
+                        
+                    case 'homing':
+                        // Slower, smoother homing
+                        const targetX = playerX + playerWidth/2;
+                        const targetY = playerY + playerHeight/2;
+                        const dx = targetX - (obstacle.x + obstacle.width/2);
+                        const dy = targetY - (obstacle.y + obstacle.height/2);
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance > 0) {
+                            // Reduced speed multiplier makes them slower
+                            const speed = obstacle.speed * 0.5;
+                            obstacle.x += (dx / distance) * speed * deltaTime * 60;
+                            obstacle.y += (dy / distance) * speed * deltaTime * 60;
+                        }
+                        break;
+                        
+                    case 'bouncing': // For circle enemies and asteroids
+                        obstacle.x += obstacle.speed * obstacle.directionX * deltaTime * 60;
+                        obstacle.y += obstacle.speed * obstacle.directionY * deltaTime * 60;
+                        
+                        // Bounce off walls
+                        if (obstacle.x <= 0) {
+                            obstacle.x = 0;
+                            obstacle.directionX = 1;
+                        } else if (obstacle.x >= gameWidth - obstacle.width) {
+                            obstacle.x = gameWidth - obstacle.width;
+                            obstacle.directionX = -1;
+                        }
+                        
+                        if (obstacle.y <= 0) {
+                            obstacle.y = 0;
+                            obstacle.directionY = 1;
+                        } else if (obstacle.y >= gameHeight - obstacle.height) {
+                            obstacle.y = gameHeight - obstacle.height;
+                            obstacle.directionY = -1;
+                        }
+                        break;
+                        
+                    case 'swarming': // For alien swarms
+                        // Swarming behavior - moves in groups with some randomness
+                        obstacle.x += Math.sin(elapsed * 3) * obstacle.speed * deltaTime * 30;
+                        obstacle.y += Math.cos(elapsed * 2) * obstacle.speed * deltaTime * 30;
+                        
+                        // Also move generally toward the right
+                        obstacle.x += obstacle.speed * deltaTime * 20;
+                        
+                        // Wrap around screen edges
+                        if (obstacle.x > gameWidth) obstacle.x = -obstacle.width;
+                        if (obstacle.y > gameHeight) obstacle.y = -obstacle.height;
+                        if (obstacle.y < -obstacle.height) obstacle.y = gameHeight;
+                        break;
+                        
+                    case 'gravitational': // For black holes
+                        // Move toward center of screen
+                        const centerX = gameWidth / 2;
+                        const centerY = gameHeight / 2;
+                        const centerDx = centerX - (obstacle.x + obstacle.width/2);
+                        const centerDy = centerY - (obstacle.y + obstacle.height/2);
+                        const centerDist = Math.sqrt(centerDx * centerDx + centerDy * centerDy);
+                        
+                        if (centerDist > 0) {
+                            const centerSpeed = obstacle.speed * 0.3;
+                            obstacle.x += (centerDx / centerDist) * centerSpeed * deltaTime * 60;
+                            obstacle.y += (centerDy / centerDist) * centerSpeed * deltaTime * 60;
+                        }
+                        
+                        // Also pull player slightly
+                        const playerDx = playerX - (obstacle.x + obstacle.width/2);
+                        const playerDy = playerY - (obstacle.y + obstacle.height/2);
+                        const playerDist = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+                        
+                        if (playerDist > 0 && playerDist < 400) { // Increased pull range
+                            const pullStrength = (400 - playerDist) / 400 * 0.8; // Stronger pull
+                            playerX += playerDx / playerDist * pullStrength;
+                            playerY += playerDy / playerDist * pullStrength;
+                            blackholePullActive = true;
+                        }
+                        break;
+                }
+                
+                // Boundary checks for all obstacles
+                obstacle.x = Math.max(0, Math.min(gameWidth - obstacle.width, obstacle.x));
+                obstacle.y = Math.max(0, Math.min(gameHeight - obstacle.height, obstacle.y));
+                
+                obstacle.element.style.left = obstacle.x + 'px';
+                obstacle.element.style.top = obstacle.y + 'px';
+            }
+        }
+        
+        // Increase score
+        function increaseScore(points = 1) {
+            score += points;
+            scoreDisplay.textContent = `Distance: ${Math.floor(score)}`;
+            
+            // Score pulse effect
+            if (points > 0.5) {
+                scoreDisplay.style.transform = 'scale(1.1)';
+                setTimeout(() => scoreDisplay.style.transform = 'scale(1)', 200);
+            }
+        }
+        
+        // Check for collisions
+        function checkCollisions() {
+            const playerRect = {
+                x: playerX,
+                y: playerY,
+                width: playerWidth,
+                height: playerHeight
+            };
+            
+            for (const obstacle of obstacles) {
+                // Different collision detection for triangles
+                if (obstacle.type === 'triangle' || obstacle.type === 'alien-ship') {
+                    // Simple rectangular collision for triangle (could be improved)
+                    if (
+                        playerRect.x < obstacle.x + obstacle.width &&
+                        playerRect.x + playerRect.width > obstacle.x &&
+                        playerRect.y < obstacle.y + obstacle.height &&
+                        playerRect.y + playerRect.height > obstacle.y
+                    ) {
+                        createExplosion(playerX + playerWidth/2, playerY + playerHeight/2);
+                        gameOver();
+                        break;
+                    }
+                } else {
+                    // Standard rectangular collision
+                    if (
+                        playerRect.x < obstacle.x + obstacle.width &&
+                        playerRect.x + playerRect.width > obstacle.x &&
+                        playerRect.y < obstacle.y + obstacle.height &&
+                        playerRect.y + playerRect.height > obstacle.y
+                    ) {
+                        if (obstacle.type.includes('alien')) {
+                            // Create alien explosion effect
+                            const explosion = document.createElement('div');
+                            explosion.className = 'explosion-alien';
+                            explosion.style.left = (playerX + playerWidth/2 - 30) + 'px';
+                            explosion.style.top = (playerY + playerHeight/2 - 30) + 'px';
+                            explosion.style.background = `radial-gradient(circle, ${obstacle.element.style.color} 0%, rgba(0,0,0,0) 70%)`;
+                            gameContainer.appendChild(explosion);
+                            
+                            setTimeout(() => {
+                                gameContainer.removeChild(explosion);
+                            }, 500);
+                        } else {
+                            createExplosion(playerX + playerWidth/2, playerY + playerHeight/2);
+                        }
+                        gameOver();
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Check if player reached right side
+        function checkLevelCompletion() {
+            if (playerX >= gameWidth - playerWidth - 10) {
+                completeLevel();
+            }
+        }
+        
+        // Complete the current level
+        function completeLevel() {
+            completingLevel = true;
+            gameRunning = false;
+            
+            // Show level complete message
+            levelUpMessage.style.display = 'block';
+            
+            // Play level complete sound
+            sounds.levelComplete.currentTime = 0;
+            sounds.levelComplete.play();
+            
+            // Show the planet goal at the right side
+            planetGoal.style.display = 'block';
+            planetGoal.style.right = '-50px';
+            planetGoal.style.transition = 'right 1.5s ease-out';
+            setTimeout(() => {
+                planetGoal.style.right = '50px';
+            }, 50);
+            
+            // Clear all obstacles with fade out effect
+            for (const obstacle of obstacles) {
+                obstacle.element.style.transition = 'opacity 0.5s';
+                obstacle.element.style.opacity = '0';
+                setTimeout(() => {
+                    if (obstacle.element.parentNode) {
+                        gameContainer.removeChild(obstacle.element);
+                    }
+                }, 500);
+            }
+            obstacles = [];
+            
+            // Clear all projectiles
+            for (const projectile of alienProjectiles) {
+                if (projectile.element.parentNode) {
+                    gameContainer.removeChild(projectile.element);
+                }
+            }
+            alienProjectiles = [];
+            
+            // Check if chapter is complete
+            const currentChapter = chapters[chapter - 1];
+            if (level >= currentChapter.levels) {
+                // Chapter complete - show cutscene
+                setTimeout(() => {
+                    levelUpMessage.style.display = 'none';
+                    planetGoal.style.display = 'none';
+                    showChapterCutscene();
+                }, 1500);
+            } else {
+                // Just level complete - show normal victory
+                setTimeout(() => {
+                    levelUpMessage.style.display = 'none';
+                    planetGoal.style.display = 'none';
+                    createBlockFamily();
+                    levelCompleteScreen.style.display = 'flex';
+                    finalDistanceDisplay.textContent = `Mission ${level} complete! Distance: ${Math.floor(score)}`;
+                }, 1500);
+            }
+        }
+        
+        // Go to next level
+        function nextLevel() {
+            // Increase level
+            level++;
+            
+            // Update displays
+            levelDisplay.textContent = `Level: ${level}`;
+            missionDisplay.textContent = `Mission: ${chapters[chapter - 1].mission}`;
+            
+            // Level display effect
+            levelDisplay.style.color = '#00ffaa';
+            levelDisplay.style.textShadow = '0 0 10px rgba(0, 255, 170, 0.7)';
+            setTimeout(() => {
+                levelDisplay.style.color = 'white';
+                levelDisplay.style.textShadow = '0 0 5px rgba(0, 180, 255, 0.8)';
+            }, 1000);
+            
+            // Hide victory screen
+            levelCompleteScreen.style.display = 'none';
+            
+            // Reset player position to left side
+            playerX = 20;
+            playerY = Math.floor(Math.random() * (gameHeight - playerHeight - 40)) + 20;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            
+            // Reset score for new level
+            score = 0;
+            scoreDisplay.textContent = `Distance: ${score}`;
+            
+            // Create new obstacles and planets for next level
+            createInitialObstacles();
+            createLevelPlanets();
+            
+            // Start game and music
+            gameRunning = true;
+            completingLevel = false;
+            bgMusic.play();
+        }
+        
+        // Restart current level
+        function restartLevel() {
+            // Clear obstacles
+            obstacles.forEach(o => {
+                if (o.element.parentNode) {
+                    gameContainer.removeChild(o.element);
+                }
+            });
+            obstacles = [];
+            
+            // Clear projectiles
+            alienProjectiles.forEach(p => {
+                if (p.element.parentNode) {
+                    gameContainer.removeChild(p.element);
+                }
+            });
+            alienProjectiles = [];
+            
+            // Reset player
+            playerX = 20;
+            playerY = gameHeight / 2;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            player.style.opacity = '1';
+            player.style.transform = 'scale(1)';
+            
+            // Reset score for level
+            score = 0;
+            scoreDisplay.textContent = `Distance: ${score}`;
+            
+            // Create new obstacles
+            createInitialObstacles();
+            
+            // Hide game over screen
+            gameOverScreen.style.display = 'none';
+            gameRunning = true;
+            isPaused = false;
+            bgMusic.play();
+        }
+        
+        // Restart current chapter
+        function restartChapter() {
+            level = 1;
+            score = 0;
+            obstacleSpeed = 3;
+            
+            // Update displays
+            levelDisplay.textContent = `Level: ${level}`;
+            scoreDisplay.textContent = `Distance: ${score}`;
+            
+            // Reset player
+            playerX = 20;
+            playerY = gameHeight / 2;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            player.style.opacity = '1';
+            player.style.transform = 'scale(1)';
+            
+            // Clear obstacles
+            obstacles.forEach(o => {
+                if (o.element.parentNode) {
+                    gameContainer.removeChild(o.element);
+                }
+            });
+            obstacles = [];
+            
+            // Clear projectiles
+            alienProjectiles.forEach(p => {
+                if (p.element.parentNode) {
+                    gameContainer.removeChild(p.element);
+                }
+            });
+            alienProjectiles = [];
+            
+            // Create new obstacles and planets
+            createInitialObstacles();
+            createLevelPlanets();
+            
+            // Hide game over screen
+            gameOverScreen.style.display = 'none';
+            gameRunning = true;
+            isPaused = false;
+            bgMusic.play();
+        }
+        
+        // Game over function
+        function gameOver() {
+            gameRunning = false;
+            finalScoreDisplay.textContent = `Distance traveled: ${Math.floor(score)}`;
+            gameOverScreen.style.display = 'flex';
+            
+            // Play game over sound
+            sounds.gameOver.currentTime = 0;
+            sounds.gameOver.play();
+            
+            // Pause background music
+            bgMusic.pause();
+            
+            // Player explosion effect
+            player.style.opacity = '0';
+            player.style.transform = 'scale(2)';
+        }
+        
+        // Reset game function
+        function resetGame() {
+            // Clear all obstacles and planets
+            obstacles.forEach(o => {
+                if (o.element.parentNode) {
+                    gameContainer.removeChild(o.element);
+                }
+            });
+            obstacles = [];
+            
+            // Clear all projectiles
+            alienProjectiles.forEach(p => {
+                if (p.element.parentNode) {
+                    gameContainer.removeChild(p.element);
+                }
+            });
+            alienProjectiles = [];
+            
+            levelPlanets.forEach(planet => {
+                if (planet.parentNode) {
+                    gameContainer.removeChild(planet);
+                }
+            });
+            levelPlanets = [];
+            
+            // Reset player position and appearance
+            playerX = 20;
+            playerY = gameHeight / 2;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            player.style.opacity = '1';
+            player.style.transform = 'scale(1)';
+            
+            // Reset game variables
+            score = 0;
+            level = 1;
+            chapter = 1;
+            obstacleSpeed = 3;
+            playerSpeed = 8;
+            frameCount = 0;
+            isPaused = false;
+            
+            // Update displays
+            scoreDisplay.textContent = `Distance: ${score}`;
+            levelDisplay.textContent = `Level: ${level}`;
+            chapterDisplay.textContent = `Chapter: ${chapter} - ${chapters[chapter - 1].title}`;
+            missionDisplay.textContent = `Mission: ${chapters[chapter - 1].mission}`;
+            
+            // Hide messages and screens
+            gameOverScreen.style.display = 'none';
+            levelCompleteScreen.style.display = 'none';
+            chapterCompleteScreen.style.display = 'none';
+            levelUpMessage.style.display = 'none';
+            planetGoal.style.display = 'none';
+            pauseMenu.style.display = 'none';
+            
+            // Create initial obstacles and planets
+            createInitialObstacles();
+            createLevelPlanets();
+            
+            // Start game and music
+            gameRunning = true;
+            completingLevel = false;
+            bgMusic.play();
+        }
+        
+        // Start the game from opening cutscene
+        function startGame() {
+            openingCutscene.style.display = 'none';
+            resetGame();
+            gameRunning = true;
+            bgMusic.play();
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keysPressed[e.key] = true;
+            
+            // Pause game with P key
+            if (e.key === 'p' || e.key === 'P') {
+                togglePause();
+            }
+            
+            if (e.key === 'r' && !gameRunning) {
+                resetGame();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
+        
+        restartLevelBtn.addEventListener('click', restartLevel);
+        restartChapterBtn.addEventListener('click', restartChapter);
+        menuBtn.addEventListener('click', () => {
+            window.location.href = 'menu.html';
+        });
+        nextLevelBtn.addEventListener('click', nextLevel);
+        menuBtn2.addEventListener('click', () => {
+            window.location.href = 'menu.html';
+        });
+        startGameBtn.addEventListener('click', startGame);
+        
+        // Pause menu event listeners
+        pauseBtn.addEventListener('click', togglePause);
+        resumeBtn.addEventListener('click', togglePause);
+        restartLevelPauseBtn.addEventListener('click', () => {
+            restartLevel();
+            pauseMenu.style.display = 'none';
+        });
+        menuPauseBtn.addEventListener('click', () => {
+            window.location.href = 'menu.html';
+        });
+        
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        window.addEventListener('resize', handleResize);
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+        });
+        
+        // Initialize the game
+        createStars();
+        openingCutscene.style.display = 'flex'; // Show opening cutscene first
+        gameLoop();
+    </script>
+</body>
+</html>

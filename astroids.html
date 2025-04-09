@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dot Shooter</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; background: black; }
+        #score, #highScore, #pauseButton {
+            position: absolute;
+            top: 10px;
+            color: #00aaff; /* Bright blue */
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        #score { left: 10px; }
+        #highScore { right: 10px; }
+        #pauseButton { 
+            top: 40px; 
+            left: 10px; 
+            color: #00aaff;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #gameOver, #pauseMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00aaff;
+        }
+
+        #gameOver h1, #pauseMenu h1 {
+            font-size: 60px;
+            margin: 0;
+            animation: pulse 1.5s infinite;
+            color: #ff4444; /* Red for emphasis */
+        }
+
+        #gameOver p, #pauseMenu p {
+            font-size: 24px;
+            margin: 10px 0;
+            color: white;
+        }
+
+        #gameOver button, #pauseMenu button {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin: 10px;
+            background: #00aaff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        #gameOver button:hover, #pauseMenu button:hover {
+            background: #ffaa00;
+        }
+
+        #newHighScore {
+            font-size: 30px;
+            color: #ffaa00; /* Bright orange */
+            display: none;
+            margin: 10px 0;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        #powerUpMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgb(102, 76, 76);
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 1s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
+    <div id="pauseButton">⏸ Pause</div>
+    <div id="gameOver">
+        <h1>Game Over</h1>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <div id="newHighScore">NEW HIGH SCORE!</div>
+        <button id="restart">Restart</button>
+        <button id="menu">Menu</button>
+    </div>
+    <div id="pauseMenu">
+        <h1>Game Paused</h1>
+        <button id="resume">Resume</button>
+        <button id="pauseRestart">Restart</button>
+        <button id="pauseMenuButton">Menu</button>
+    </div>
+    <div id="powerUpMessage"></div> <!-- Power-up activation message -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Audio elements for sound effects -->
+    <audio id="collectSound" src="collect.wav"></audio>
+    <audio id="collisionSound" src="boss_hit.wav"></audio>
+    <audio id="gameOverSound" src="gameover.wav"></audio>
+    <audio id="meteorSound" src="80938__tony-b-kksm__soft-explosion.wav"></audio>
+    <audio id="shootSound" src="pew.wav"></audio>
+    <audio id="explosionSound" src="bomb.wav"></audio>
+    <audio id="powerupSound" src="powerup.wav"></audio>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+        const highScoreDisplay = document.getElementById("highScore");
+        const pauseButton = document.getElementById("pauseButton");
+        const gameOverScreen = document.getElementById("gameOver");
+        const pauseMenu = document.getElementById("pauseMenu");
+        const finalScoreDisplay = document.getElementById("finalScore");
+        const newHighScoreDisplay = document.getElementById("newHighScore");
+        const restartButton = document.getElementById("restart");
+        const menuButton = document.getElementById("menu");
+        const resumeButton = document.getElementById("resume");
+        const pauseRestartButton = document.getElementById("pauseRestart");
+        const pauseMenuButton = document.getElementById("pauseMenuButton");
+        const powerUpMessage = document.getElementById("powerUpMessage");
+
+        // Audio elements
+        const collectSound = document.getElementById("collectSound");
+        const collisionSound = document.getElementById("collisionSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const meteorSound = document.getElementById("meteorSound");
+        const shootSound = document.getElementById("shootSound");
+        const explosionSound = document.getElementById("explosionSound");
+        const powerupSound = document.getElementById("powerupSound");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 20,
+            speedX: 0,
+            speedY: 0,
+            maxSpeed: 7,
+            acceleration: 0.2,
+            deceleration: 0.1,
+            isShielded: false, // Shield power-up
+            rapidFire: false, // Rapid fire power-up
+            multiShot: false, // Multi-shot power-up
+        };
+        let obstacles = [];
+        let projectiles = [];
+        let powerUps = [];
+        let keys = {};
+        let gameRunning = true;
+        let score = 0;
+        let highScore = localStorage.getItem("highScore") || 0;
+        let difficultyMultiplier = 1;
+        let speedIncreaseRate = 0.005;
+        let isPaused = false;
+
+        // Starry background
+        let stars = [];
+        const numStars = 200;
+
+        function createStars() {
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    opacity: Math.random(),
+                    speed: Math.random() * 0.5
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+
+                // Update star position for twinkling effect
+                star.opacity += star.speed * 0.01;
+                if (star.opacity > 1 || star.opacity < 0) {
+                    star.speed *= -1;
+                }
+            });
+        }
+
+        createStars();
+
+        // Projectile class
+        class Projectile {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.size = 5;
+                this.speed = 10;
+                this.angle = angle; // Angle in radians
+            }
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+            draw() {
+                ctx.fillStyle = "yellow";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Power-Up class
+        class PowerUp {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.size = 20;
+                this.type = type; // "shield", "rapidFire", "multiShot"
+            }
+            draw() {
+                ctx.fillStyle = this.type === "shield" ? "cyan" :
+                               this.type === "rapidFire" ? "lime" :
+                               "magenta"; // Multi-shot
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Explosion effect
+        class Explosion {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = [];
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push({
+                        x: this.x,
+                        y: this.y,
+                        size: Math.random() * 3 + 1,
+                        speedX: (Math.random() - 0.5) * 5,
+                        speedY: (Math.random() - 0.5) * 5,
+                        opacity: 1
+                    });
+                }
+            }
+            update() {
+                this.particles.forEach(particle => {
+                    particle.x += particle.speedX;
+                    particle.y += particle.speedY;
+                    particle.opacity -= 0.02;
+                });
+            }
+            draw() {
+                this.particles.forEach(particle => {
+                    ctx.fillStyle = `rgba(255, 165, 0, ${particle.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        let explosions = [];
+
+        // Obstacle class
+        class Obstacle {
+            constructor(x, y, size, speed, angle) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.speed = speed;
+                this.angle = angle; // Angle in radians
+            }
+            update() {
+                this.x += Math.cos(this.angle) * this.speed * difficultyMultiplier;
+                this.y += Math.sin(this.angle) * this.speed * difficultyMultiplier;
+            }
+            draw() {
+                ctx.fillStyle = "red";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        highScoreDisplay.textContent = "High Score: " + highScore;
+
+        // Handle mouse clicks
+        canvas.addEventListener("mousedown", (e) => {
+            if (e.button === 0 && !isPaused) { // Left click
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+
+                // Calculate angle between player and cursor
+                const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+                // Shoot projectiles
+                if (player.multiShot) {
+                    // Shoot 3 projectiles at slightly different angles
+                    projectiles.push(new Projectile(player.x, player.y, angle - 0.2));
+                    projectiles.push(new Projectile(player.x, player.y, angle));
+                    projectiles.push(new Projectile(player.x, player.y, angle + 0.2));
+                } else {
+                    projectiles.push(new Projectile(player.x, player.y, angle));
+                }
+                shootSound.play();
+            }
+        });
+
+        window.addEventListener("keydown", (e) => {
+            keys[e.key] = true;
+            
+            // Pause game with Escape key
+            if (e.key === "Escape") {
+                togglePause();
+            }
+        });
+        window.addEventListener("keyup", (e) => keys[e.key] = false);
+
+        // Pause button click handler
+        pauseButton.addEventListener("click", togglePause);
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseMenu.style.display = "block";
+                pauseButton.textContent = "▶ Play";
+            } else {
+                pauseMenu.style.display = "none";
+                pauseButton.textContent = "⏸ Pause";
+            }
+        }
+
+        function checkCollision(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < a.size / 2 + b.size / 2;
+        }
+
+        // Show power-up activation message
+        function showPowerUpMessage(type) {
+            powerUpMessage.textContent = `${type} activated!`;
+            powerUpMessage.style.opacity = 1;
+
+            // Fade out the message after 2 seconds
+            setTimeout(() => {
+                powerUpMessage.style.opacity = 0;
+            }, 2000);
+        }
+
+        function update() {
+            if (isPaused) return;
+
+            // Player movement
+            if (keys["ArrowLeft"]) {
+                player.speedX = Math.max(player.speedX - player.acceleration, -player.maxSpeed);
+            } else if (keys["ArrowRight"]) {
+                player.speedX = Math.min(player.speedX + player.acceleration, player.maxSpeed);
+            } else {
+                if (player.speedX > 0) {
+                    player.speedX = Math.max(player.speedX - player.deceleration, 0);
+                } else if (player.speedX < 0) {
+                    player.speedX = Math.min(player.speedX + player.deceleration, 0);
+                }
+            }
+
+            if (keys["ArrowUp"]) {
+                player.speedY = Math.max(player.speedY - player.acceleration, -player.maxSpeed);
+            } else if (keys["ArrowDown"]) {
+                player.speedY = Math.min(player.speedY + player.acceleration, player.maxSpeed);
+            } else {
+                if (player.speedY > 0) {
+                    player.speedY = Math.max(player.speedY - player.deceleration, 0);
+                } else if (player.speedY < 0) {
+                    player.speedY = Math.min(player.speedY + player.deceleration, 0);
+                }
+            }
+
+            player.x += player.speedX;
+            player.y += player.speedY;
+
+            // Prevent player from moving off-screen
+            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const projectile = projectiles[i];
+                projectile.update();
+
+                // Remove projectiles that go off-screen
+                if (
+                    projectile.x < 0 || projectile.x > canvas.width ||
+                    projectile.y < 0 || projectile.y > canvas.height
+                ) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Check for collisions with obstacles
+                for (let j = obstacles.length - 1; j >= 0; j--) {
+                    const obs = obstacles[j];
+                    if (checkCollision(projectile, obs)) {
+                        explosions.push(new Explosion(obs.x, obs.y));
+                        obstacles.splice(j, 1);
+                        projectiles.splice(i, 1);
+                        score += 10;
+                        scoreDisplay.textContent = "Score: " + score;
+                        explosionSound.play();
+                        break;
+                    }
+                }
+            }
+
+            // Update explosions
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const explosion = explosions[i];
+                explosion.update();
+                if (explosion.particles[0].opacity <= 0) {
+                    explosions.splice(i, 1);
+                }
+            }
+
+            // Spawn obstacles from all sides
+            if (Math.random() < 0.02 * difficultyMultiplier) {
+                let size = 20 + Math.random() * 20;
+                let speed = 2 + Math.random() * 3;
+                let side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+                let x, y, angle;
+
+                switch (side) {
+                    case 0: // Top
+                        x = Math.random() * canvas.width;
+                        y = -size;
+                        angle = Math.atan2(player.y - y, player.x - x);
+                        break;
+                    case 1: // Right
+                        x = canvas.width + size;
+                        y = Math.random() * canvas.height;
+                        angle = Math.atan2(player.y - y, player.x - x);
+                        break;
+                    case 2: // Bottom
+                        x = Math.random() * canvas.width;
+                        y = canvas.height + size;
+                        angle = Math.atan2(player.y - y, player.x - x);
+                        break;
+                    case 3: // Left
+                        x = -size;
+                        y = Math.random() * canvas.height;
+                        angle = Math.atan2(player.y - y, player.x - x);
+                        break;
+                }
+
+                obstacles.push(new Obstacle(x, y, size, speed, angle));
+            }
+
+            // Spawn power-ups randomly
+            if (Math.random() < 0.01) {
+                const types = ["shield", "rapidFire", "multiShot"];
+                const type = types[Math.floor(Math.random() * types.length)];
+                powerUps.push(new PowerUp(Math.random() * canvas.width, Math.random() * canvas.height, type));
+            }
+
+            // Update power-ups
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const powerUp = powerUps[i];
+                if (checkCollision(player, powerUp)) {
+                    powerupSound.play();
+                    switch (powerUp.type) {
+                        case "shield":
+                            player.isShielded = true;
+                            setTimeout(() => player.isShielded = false, 5000); // Shield lasts 5 seconds
+                            break;
+                        case "rapidFire":
+                            player.rapidFire = true;
+                            setTimeout(() => player.rapidFire = false, 5000); // Rapid fire lasts 5 seconds
+                            break;
+                        case "multiShot":
+                            player.multiShot = true;
+                            setTimeout(() => player.multiShot = false, 5000); // Multi-shot lasts 5 seconds
+                            break;
+                    }
+                    showPowerUpMessage(powerUp.type); // Show activation message
+                    powerUps.splice(i, 1);
+                }
+            }
+
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.update();
+
+                // Remove obstacles that go off-screen
+                if (
+                    obs.x < -obs.size || obs.x > canvas.width + obs.size ||
+                    obs.y < -obs.size || obs.y > canvas.height + obs.size
+                ) {
+                    obstacles.splice(i, 1);
+                    score += 1;
+                    scoreDisplay.textContent = "Score: " + score;
+                    difficultyMultiplier += speedIncreaseRate;
+                }
+
+                // Check for collisions with player
+                if (checkCollision(obs, player)) {
+                    if (!player.isShielded) {
+                        collisionSound.play();
+                        gameRunning = false;
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            drawStars();
+
+            // Draw player
+            ctx.fillStyle = player.isShielded ? "cyan" : "blue";
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+
+            // Draw obstacles
+            obstacles.forEach(obs => obs.draw());
+
+            // Draw projectiles
+            projectiles.forEach(projectile => projectile.draw());
+
+            // Draw explosions
+            explosions.forEach(explosion => explosion.draw());
+
+            // Draw power-ups
+            powerUps.forEach(powerUp => powerUp.draw());
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                if (!isPaused) {
+                    update();
+                    draw();
+                }
+                requestAnimationFrame(gameLoop);
+            } else {
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                    highScoreDisplay.textContent = "High Score: " + highScore;
+                    newHighScoreDisplay.style.display = "block";
+                }
+                finalScoreDisplay.textContent = score;
+                gameOverScreen.style.display = "block";
+                gameOverSound.play();
+            }
+        }
+
+        restartButton.addEventListener("click", () => {
+            location.reload();
+        });
+
+        menuButton.addEventListener("click", () => {
+            window.location.href = "menu.html";
+        });
+
+        resumeButton.addEventListener("click", togglePause);
+        pauseRestartButton.addEventListener("click", () => {
+            location.reload();
+        });
+        pauseMenuButton.addEventListener("click", () => {
+            window.location.href = "menu.html";
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>

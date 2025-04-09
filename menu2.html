@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Block Games</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #00aaff, #ffaa00);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .menu-container {
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .menu {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .menu h1 {
+            font-size: clamp(2rem, 8vw, 2.8rem);
+            margin: 0 0 1.5rem 0;
+            animation: pulse 2s infinite;
+            text-shadow: 0 0 10px rgba(0, 170, 255, 0.7);
+            padding: 0;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .space-mode-section {
+            margin: 1.5rem 0;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .space-mode-section h2 {
+            margin: 0 0 1rem 0;
+            color: #ffaa00;
+            font-size: 1.3rem;
+            text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+        }
+
+        .space-mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            position: relative;
+        }
+
+        .menu button {
+            display: block;
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0 auto;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background: rgba(0, 170, 255, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu button:hover {
+            background: rgba(255, 170, 0, 0.8);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .menu button:active {
+            transform: translateY(0);
+        }
+
+        .space-mode-buttons button {
+            background: rgba(153, 50, 204, 0.8);
+        }
+
+        .space-mode-buttons button:hover {
+            background: rgba(255, 105, 180, 0.8);
+        }
+
+        .menu button.controls-btn {
+            margin-top: 1.5rem;
+            background: rgba(85, 85, 85, 0.8);
+            font-size: 0.9rem;
+            padding: 0.7rem;
+        }
+
+        .menu button.controls-btn:hover {
+            background: rgba(119, 119, 119, 0.8);
+        }
+
+        /* Most Popular Ribbon */
+        .popular-ribbon {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff0000;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 3px;
+            transform: rotate(15deg);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+            animation: wiggle 1s infinite alternate;
+        }
+
+        .popular-ribbon::before {
+            content: "";
+            position: absolute;
+            top: 100%;
+            right: 0;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #cc0000 transparent transparent #cc0000;
+        }
+
+        @keyframes wiggle {
+            0% { transform: rotate(15deg) scale(1); }
+            100% { transform: rotate(20deg) scale(1.05); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 1.5rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            text-align: left;
+            border: 1px solid rgba(0, 170, 255, 0.5);
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: #00aaff;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content table {
+            width: 100%;
+            color: white;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content table td {
+            padding: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-content table td:first-child {
+            font-weight: bold;
+            width: 40%;
+            color: #ffaa00;
+        }
+
+        .close-btn {
+            display: block;
+            margin: 0 auto;
+            padding: 0.8rem 1.5rem;
+            background: #00aaff;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #ffaa00;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .menu {
+                padding: 1.2rem;
+            }
+            
+            .menu h1 {
+                margin-bottom: 1rem;
+                font-size: 1.8rem;
+            }
+            
+            .menu button {
+                font-size: 0.9rem;
+                padding: 0.7rem;
+            }
+            
+            .space-mode-section h2 {
+                font-size: 1.1rem;
+            }
+            
+            .modal-content {
+                padding: 1rem;
+            }
+            
+            .modal-content table td {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            .popular-ribbon {
+                font-size: 0.6rem;
+                padding: 2px 6px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .menu {
+                padding: 1rem;
+            }
+            
+            .menu h1 {
+                font-size: 1.5rem;
+                margin-bottom: 0.8rem;
+            }
+            
+            .menu button {
+                padding: 0.6rem;
+                font-size: 0.9rem;
+            }
+            
+            .menu-buttons, .space-mode-buttons {
+                gap: 0.6rem;
+            }
+            
+            .space-mode-section {
+                margin: 1rem 0;
+                padding-top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-container">
+        <div class="menu">
+            <h1>Blue Block Games</h1>
+            <div class="menu-buttons">
+                <button onclick="window.location.href='blockystory.html'">Story Mode</button>
+                <button onclick="window.location.href='spacebossmode 3.0.html'">Boss Mode</button>
+                
+            </div>
+
+            <div class="space-mode-section">
+                <h1>Extras</h1>
+             <div class="space-mode-buttons">
+                <button onclick="window.location.href='dot game.html'">Dot Dodge</button>
+                <button onclick="window.location.href='multiplayer1.0.html'">Dot Dodge Two-Player</button>
+                <button onclick="window.location.href='blockyroad2.0.html'">Blocky Road</button>
+                <button onclick="window.location.href='Blocky Road CC.html'">Blocky Road Coin Collector</button>
+                <button onclick="window.location.href='stack2.html'">Stack</button>
+                <button onclick="window.location.href='astroids.html'">Asteroids</button>
+                <button onclick="window.location.href='space shooter.html'">Space Shooter</button>
+                </div>
+            </div>
+
+            <button class="controls-btn" onclick="openControls()">Controls</button>
+        </div>
+    </div>
+
+    <!-- Controls Modal -->
+    <div id="controlsModal" class="modal">
+        <div class="modal-content">
+            <h2>Controls</h2>
+            <table>
+                <tr>
+                    <td>Move</td>
+                    <td> Arrow keys  (A and D keys in multiplayer) </td>
+                </tr>
+                <tr>
+                    <td>Pause</td>
+                    <td> pause button/P/Space (varies in game modes) </td>
+                </tr>
+                <tr>
+                    <td>Shoot (if avaliable)</td>
+                    <td> Space or left click</td>
+                </tr>
+                <tr>
+                    <td>Dark Mode (Dot Dodge)</td>
+                    <td> D or L</td>
+                </tr>
+                <tr>
+                    <td>Menu </td>
+                    <td>Menu button</td>
+                </tr>
+                <tr>
+                    <td>Fart</td>
+                    <td>F</td>
+                </tr>
+                <tr>
+                    <td>Touch Controls</td>
+                    <td>Touch left/right side of screen to move</td>
+                </tr>
+            </table>
+            <button class="close-btn" onclick="closeControls()">Close</button>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for fart sound -->
+    <audio id="fartSound" preload="auto">
+        <source src="fart.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // Function to open the controls modal
+        function openControls() {
+            document.getElementById('controlsModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Function to close the controls modal
+        function closeControls() {
+            document.getElementById('controlsModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside content
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('controlsModal');
+            if (event.target === modal) {
+                closeControls();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeControls();
+            }
+            
+            // Play fart sound when F key is pressed
+            if (event.key.toLowerCase() === 'f') {
+                playFartSound();
+            }
+        });
+
+        // Function to play fart sound
+        function playFartSound() {
+            const fartSound = document.getElementById('fartSound');
+            fartSound.currentTime = 0; // Rewind to start if already playing
+            fartSound.play().catch(e => console.log("Couldn't play fart sound:", e));
+        }
+
+        // Initialize audio context on user interaction (for mobile browsers)
+        document.body.addEventListener('click', function() {
+            // This empty play/pause cycle helps unlock audio on mobile devices
+            const fartSound = document.getElementById('fartSound');
+            fartSound.volume = 0.5;
+            fartSound.play().then(() => {
+                fartSound.pause();
+                fartSound.currentTime = 0;
+            }).catch(e => {});
+        }, { once: true });
+    </script>
+</body>
+</html>

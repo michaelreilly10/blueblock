@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Frogger</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background-color: #5d9632; /* Grass color */
+            overflow: hidden;
+        }
+
+        #game-board {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: repeating-linear-gradient(
+                to bottom,
+                #5d9632 0%,
+                #5d9632 10%,
+                #87CEEB 10%,
+                #87CEEB 90%,
+                #5d9632 90%,
+                #5d9632 100%
+            );
+        }
+
+        /* Road markings */
+        .road-marking {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: white;
+            opacity: 0.6;
+        }
+
+        #player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #4169E1;
+            border-radius: 3px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            border-radius: 3px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+
+        .car1 { background-color: #FF6347; } /* Tomato */
+        .car2 { background-color: #32CD32; } /* Lime green */
+        .car3 { background-color: #9370DB; } /* Medium purple */
+        .car4 { background-color: #FFD700; } /* Gold */
+
+        .coin {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: gold;
+            border-radius: 50%;
+            z-index: 8;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+
+        #score-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            z-index: 20;
+        }
+
+        #lives {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 18px;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            z-index: 20;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            font-size: 30px;
+            text-align: center;
+        }
+
+        #high-score {
+            font-size: 24px;
+            margin: 10px 0;
+            color: gold;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+            text-align: center;
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        .instructions {
+            margin: 20px;
+            font-size: 16px;
+            max-width: 80%;
+        }
+
+        .invincible {
+            animation: flash 0.2s infinite;
+        }
+
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-board"></div>
+        <div id="player"></div>
+        <div id="score-display">Score: 0</div>
+        <div id="lives">Lives: ❤️❤️❤️</div>
+        <div id="game-over">
+            <h2>GAME OVER</h2>
+            <div id="final-score">Score: 0</div>
+            <div id="high-score">High Score: 0</div>
+            <button id="restart-btn" class="btn">Play Again</button>
+        </div>
+        <div id="start-screen">
+            <h1>FROGGER</h1>
+            <div class="instructions">
+                Use arrow keys to move<br>
+                Reach the top to score<br>
+                Avoid the cars<br>
+                Collect coins for bonus points
+            </div>
+            <button id="start-btn" class="btn">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game elements
+            const gameContainer = document.getElementById('game-container');
+            const gameBoard = document.getElementById('game-board');
+            const player = document.getElementById('player');
+            const scoreDisplay = document.getElementById('score-display');
+            const livesDisplay = document.getElementById('lives');
+            const gameOverScreen = document.getElementById('game-over');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const highScoreDisplay = document.getElementById('high-score');
+            const restartBtn = document.getElementById('restart-btn');
+            const startScreen = document.getElementById('start-screen');
+            const startBtn = document.getElementById('start-btn');
+            
+            // Game variables
+            let score = 0;
+            let highScore = localStorage.getItem('highScore') || 0;
+            let lives = 3;
+            let gameSpeed = 2;
+            let isGameOver = false;
+            let isInvincible = false;
+            let obstacles = [];
+            let coins = [];
+            let gameInterval;
+            let obstacleInterval;
+            let coinInterval;
+            
+            // Initialize game board with road markings
+            function initRoadMarkings() {
+                const roadHeight = gameContainer.offsetHeight * 0.8;
+                const roadTop = gameContainer.offsetHeight * 0.1;
+                const markingSpacing = roadHeight / 10;
+                
+                for (let i = 0; i < 9; i++) {
+                    const marking = document.createElement('div');
+                    marking.className = 'road-marking';
+                    marking.style.top = (roadTop + (i + 0.5) * markingSpacing) + 'px';
+                    gameBoard.appendChild(marking);
+                }
+            }
+            
+            // Player position (start at bottom center)
+            let playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+            let playerY = gameContainer.offsetHeight - player.offsetHeight - 20;
+            
+            // Initialize player position
+            function initPlayer() {
+                playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+                playerY = gameContainer.offsetHeight - player.offsetHeight - 20;
+                player.style.left = playerX + 'px';
+                player.style.top = playerY + 'px';
+                player.classList.remove('invincible');
+            }
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                if (isGameOver || startScreen.style.display !== 'none') return;
+                
+                const step = 30;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        playerY -= step;
+                        if (playerY < 20) {
+                            // Player reached the top - score point and reset position
+                            score += 100;
+                            updateScore();
+                            playerY = gameContainer.offsetHeight - player.offsetHeight - 20;
+                            // Increase game speed every 3 points
+                            if (score % 300 === 0) gameSpeed += 0.5;
+                            // Play sound
+                            playSound('score');
+                        }
+                        break;
+                    case 'ArrowDown':
+                        playerY = Math.min(playerY + step, gameContainer.offsetHeight - player.offsetHeight - 20);
+                        break;
+                    case 'ArrowLeft':
+                        playerX = Math.max(playerX - step, 10);
+                        break;
+                    case 'ArrowRight':
+                        playerX = Math.min(playerX + step, gameContainer.offsetWidth - player.offsetWidth - 10);
+                        break;
+                }
+                
+                player.style.left = playerX + 'px';
+                player.style.top = playerY + 'px';
+                
+                // Check collision after move
+                checkCollision();
+                checkCoinCollection();
+            });
+            
+            // Create obstacles (moving horizontally)
+            function createObstacle() {
+                if (isGameOver) return;
+                
+                const obstacle = document.createElement('div');
+                const carType = Math.floor(Math.random() * 4) + 1;
+                obstacle.className = `obstacle car${carType}`;
+                
+                // Random lane (vertical position)
+                const lane = Math.floor(Math.random() * 8) + 1; // 8 possible lanes
+                const laneHeight = gameContainer.offsetHeight * 0.1 + (lane * gameContainer.offsetHeight * 0.08);
+                
+                // Random direction (left or right)
+                const direction = Math.random() > 0.5 ? 1 : -1;
+                
+                // Random speed based on game speed
+                const speed = (1 + Math.random() * gameSpeed) * (direction > 0 ? 1 : -1);
+                
+                // Starting position
+                let obstacleX, obstacleY;
+                obstacleY = laneHeight;
+                
+                if (direction > 0) {
+                    // Moving left to right
+                    obstacleX = -60;
+                } else {
+                    // Moving right to left
+                    obstacleX = gameContainer.offsetWidth;
+                }
+                
+                // Random size variation
+                const width = 50 + Math.random() * 30;
+                obstacle.style.width = width + 'px';
+                
+                obstacle.style.left = obstacleX + 'px';
+                obstacle.style.top = obstacleY + 'px';
+                
+                gameBoard.appendChild(obstacle);
+                
+                obstacles.push({
+                    element: obstacle,
+                    x: obstacleX,
+                    y: obstacleY,
+                    speed: speed,
+                    direction: direction,
+                    width: width
+                });
+            }
+            
+            // Create coins
+            function createCoin() {
+                if (isGameOver || Math.random() > 0.3) return; // 30% chance to spawn a coin
+                
+                const coin = document.createElement('div');
+                coin.className = 'coin';
+                
+                // Random position
+                const coinX = 20 + Math.random() * (gameContainer.offsetWidth - 40);
+                const coinY = 20 + Math.random() * (gameContainer.offsetHeight - 40);
+                
+                coin.style.left = coinX + 'px';
+                coin.style.top = coinY + 'px';
+                
+                gameBoard.appendChild(coin);
+                
+                coins.push({
+                    element: coin,
+                    x: coinX,
+                    y: coinY
+                });
+            }
+            
+            // Move obstacles horizontally
+            function moveObstacles() {
+                obstacles.forEach((obstacle, index) => {
+                    obstacle.x += obstacle.speed;
+                    obstacle.element.style.left = obstacle.x + 'px';
+                    
+                    // Remove obstacle when it goes out of screen
+                    if ((obstacle.direction > 0 && obstacle.x > gameContainer.offsetWidth) || 
+                        (obstacle.direction < 0 && obstacle.x < -obstacle.width)) {
+                        gameBoard.removeChild(obstacle.element);
+                        obstacles.splice(index, 1);
+                    }
+                });
+            }
+            
+            // Check collision with obstacles
+            function checkCollision() {
+                if (isInvincible) return;
+                
+                const playerRect = {
+                    x: playerX,
+                    y: playerY,
+                    width: player.offsetWidth,
+                    height: player.offsetHeight
+                };
+                
+                for (const obstacle of obstacles) {
+                    const obstacleRect = {
+                        x: obstacle.x,
+                        y: obstacle.y,
+                        width: obstacle.element.offsetWidth,
+                        height: obstacle.element.offsetHeight
+                    };
+                    
+                    if (
+                        playerRect.x < obstacleRect.x + obstacleRect.width &&
+                        playerRect.x + playerRect.width > obstacleRect.x &&
+                        playerRect.y < obstacleRect.y + obstacleRect.height &&
+                        playerRect.y + playerRect.height > obstacleRect.y
+                    ) {
+                        hitObstacle();
+                        break;
+                    }
+                }
+            }
+            
+            // Check coin collection
+            function checkCoinCollection() {
+                const playerRect = {
+                    x: playerX,
+                    y: playerY,
+                    width: player.offsetWidth,
+                    height: player.offsetHeight
+                };
+                
+                coins.forEach((coin, index) => {
+                    const coinRect = {
+                        x: coin.x,
+                        y: coin.y,
+                        width: coin.element.offsetWidth,
+                        height: coin.element.offsetHeight
+                    };
+                    
+                    if (
+                        playerRect.x < coinRect.x + coinRect.width &&
+                        playerRect.x + playerRect.width > coinRect.x &&
+                        playerRect.y < coinRect.y + coinRect.height &&
+                        playerRect.y + playerRect.height > coinRect.y
+                    ) {
+                        // Collect coin
+                        gameBoard.removeChild(coin.element);
+                        coins.splice(index, 1);
+                        score += 50;
+                        updateScore();
+                        playSound('coin');
+                    }
+                });
+            }
+            
+            // Handle obstacle hit
+            function hitObstacle() {
+                lives--;
+                updateLives();
+                playSound('hit');
+                
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    // Temporary invincibility
+                    isInvincible = true;
+                    player.classList.add('invincible');
+                    setTimeout(() => {
+                        isInvincible = false;
+                        player.classList.remove('invincible');
+                    }, 2000);
+                    
+                    // Reset player position
+                    initPlayer();
+                }
+            }
+            
+            // Update score display
+            function updateScore() {
+                scoreDisplay.textContent = `Score: ${score}`;
+            }
+            
+            // Update lives display
+            function updateLives() {
+                livesDisplay.textContent = 'Lives: ' + '❤️'.repeat(lives);
+            }
+            
+            // Game over
+            function gameOver() {
+                isGameOver = true;
+                clearInterval(gameInterval);
+                clearInterval(obstacleInterval);
+                clearInterval(coinInterval);
+                
+                // Update high score
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('highScore', highScore);
+                }
+                
+                finalScoreDisplay.textContent = `Score: ${score}`;
+                highScoreDisplay.textContent = `High Score: ${highScore}`;
+                gameOverScreen.style.display = 'flex';
+            }
+            
+            // Play sound
+            function playSound(type) {
+                // In a real implementation, you would play actual audio files here
+                console.log(`Playing ${type} sound`);
+            }
+            
+            // Reset game
+            function resetGame() {
+                // Clear obstacles and coins
+                obstacles.forEach(obstacle => gameBoard.removeChild(obstacle.element));
+                coins.forEach(coin => gameBoard.removeChild(coin.element));
+                obstacles = [];
+                coins = [];
+                
+                // Reset game state
+                score = 0;
+                lives = 3;
+                gameSpeed = 2;
+                isGameOver = false;
+                isInvincible = false;
+                
+                // Update displays
+                updateScore();
+                updateLives();
+                
+                // Reset player
+                initPlayer();
+            }
+            
+            // Start game
+            function startGame() {
+                resetGame();
+                startScreen.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+                
+                // Create obstacles at intervals
+                obstacleInterval = setInterval(createObstacle, 1000);
+                
+                // Create coins at intervals
+                coinInterval = setInterval(createCoin, 3000);
+                
+                // Game loop
+                gameInterval = setInterval(() => {
+                    if (isGameOver) return;
+                    moveObstacles();
+                    if (!isInvincible) checkCollision();
+                    checkCoinCollection();
+                }, 20);
+            }
+            
+            // Event listeners
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+            
+            // Initialize game
+            initRoadMarkings();
+            highScoreDisplay.textContent = `High Score: ${highScore}`;
+        });
+    </script>
+</body>
+</html>

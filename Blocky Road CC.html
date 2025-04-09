@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crossy Block Adventure</title>
+    <style>
+        body {
+            text-align: center;
+            background-color: #222;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #gameContainer {
+            position: relative;
+            margin: 20px auto;
+            width: 600px;
+            max-width: 100%;
+        }
+        canvas {
+            background-color: #333;
+            display: block;
+            margin: 0 auto;
+            border: 4px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        #scoreDisplay {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px;
+            color: #4CAF50;
+            text-shadow: 1px 1px 2px black;
+        }
+        #highScore {
+            color: #FFD700;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+        #coinCount {
+            color: #FFD700;
+            font-size: 20px;
+            margin-top: 5px;
+        }
+        #startScreen, #gameOverScreen, #pauseScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        #gameOverScreen, #pauseScreen {
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .mobile-controls {
+            display: none;
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto 0;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 5px;
+        }
+        .mobile-btn {
+            background-color: rgba(52, 152, 219, 0.7);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 15px 0;
+            font-size: 20px;
+            touch-action: manipulation;
+        }
+        .mobile-btn:active {
+            background-color: rgba(41, 128, 185, 0.9);
+        }
+        .mobile-btn-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        .mobile-btn-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        .mobile-btn-down {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .mobile-btn-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        h1 {
+            color: #4CAF50;
+            text-shadow: 2px 2px 4px black;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        p {
+            margin-bottom: 20px;
+            max-width: 80%;
+            font-size: 1.1rem;
+        }
+        #finalScore, #currentScore {
+            font-size: 1.5rem;
+            margin: 10px 0;
+        }
+        .power-up-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        @media (max-width: 600px) {
+            #gameContainer {
+                width: 100%;
+                margin: 10px auto;
+            }
+            canvas {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 6/5;
+            }
+            .mobile-controls {
+                display: grid;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .btn-group {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>Crossy Block Adventure</h1>
+        <div id="scoreDisplay">Score: 0</div>
+        <div id="highScore">High Score: 0</div>
+        <div id="coinCount">Coins: 0</div>
+        <div class="power-up-indicator" id="shieldIndicator">SHIELD ACTIVE!</div>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="mobile-controls">
+            <button class="mobile-btn mobile-btn-up" id="upBtn">↑</button>
+            <button class="mobile-btn mobile-btn-left" id="leftBtn">←</button>
+            <button class="mobile-btn mobile-btn-down" id="downBtn">↓</button>
+            <button class="mobile-btn mobile-btn-right" id="rightBtn">→</button>
+        </div>
+        
+        <div id="startScreen">
+            <h1>Crossy Block Adventure</h1>
+            <p>Guide your block across the dangerous roads. Avoid cars, collect coins, and use power-ups to reach the highest score!</p>
+            <div class="btn-group">
+                <button id="startButton">Start Game</button>
+                <button id="howToPlayBtn">How to Play</button>
+                <button id="menuButtonStart">Main Menu</button>
+            </div>
+        </div>
+        
+        <div id="howToPlayScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); z-index: 20; flex-direction: column; justify-content: center; align-items: center;">
+            <h2>How to Play</h2>
+            <div style="text-align: left; max-width: 80%; margin: 0 auto 20px;">
+                <p>←↑↓→ or tap buttons to move your block</p>
+                <p>Avoid the cars - they will destroy you!</p>
+                <p>Collect coins for extra points</p>
+                <p>Reach the top to advance to the next level</p>
+                <p>Special power-ups:</p>
+                <ul>
+                    <li>⭐ Shield - Temporary invincibility</li>
+                    <li>🚀 Speed Boost - Move faster for a short time</li>
+                    <li>💰 Coin Magnet - Attracts nearby coins</li>
+                </ul>
+                <p>Game gets faster as you progress!</p>
+            </div>
+            <button id="backToMenuBtn">Back to Menu</button>
+        </div>
+        
+        <div id="gameOverScreen">
+            <h1>Game Over!</h1>
+            <div id="finalScore">Your Score: 0</div>
+            <div id="coinsCollected">Coins Collected: 0</div>
+            <div class="btn-group">
+                <button id="restartButton">Play Again</button>
+                <button id="menuButton">Main Menu</button>
+            </div>
+        </div>
+        
+        <div id="pauseScreen">
+            <h1>Game Paused</h1>
+            <div id="currentScore">Score: 0</div>
+            <div class="btn-group">
+                <button id="resumeButton">Resume</button>
+                <button id="quitButton">Main Menu</button>
+            </div>
+        </div>
+    </div>
+    <audio id="coinSound" src="collect.wav"></audio>
+    <audio id="crashSound" src="bomb.wav"></audio>
+    <audio id="levelUpSound" src="level_complete.wav"></audio>
+    <audio id="powerupSound" src="collect.wav"></audio>
+     
+
+    <script>
+        // Game elements
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const highScoreDisplay = document.getElementById("highScore");
+        const coinCountDisplay = document.getElementById("coinCount");
+        const startScreen = document.getElementById("startScreen");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const pauseScreen = document.getElementById("pauseScreen");
+        const howToPlayScreen = document.getElementById("howToPlayScreen");
+        const finalScoreDisplay = document.getElementById("finalScore");
+        const coinsCollectedDisplay = document.getElementById("coinsCollected");
+        const currentScoreDisplay = document.getElementById("currentScore");
+        const shieldIndicator = document.getElementById("shieldIndicator");
+        
+        // Buttons
+        const startButton = document.getElementById("startButton");
+        const restartButton = document.getElementById("restartButton");
+        const resumeButton = document.getElementById("resumeButton");
+        const quitButton = document.getElementById("quitButton");
+        const menuButton = document.getElementById("menuButton");
+        const menuButtonStart = document.getElementById("menuButtonStart");
+        const howToPlayBtn = document.getElementById("howToPlayBtn");
+        const backToMenuBtn = document.getElementById("backToMenuBtn");
+        
+        // Mobile controls
+        const upBtn = document.getElementById("upBtn");
+        const downBtn = document.getElementById("downBtn");
+        const leftBtn = document.getElementById("leftBtn");
+        const rightBtn = document.getElementById("rightBtn");
+        
+        // Audio elements
+        const coinSound = document.getElementById("coinSound");
+        const crashSound = document.getElementById("crashSound");
+        const powerupSound = document.getElementById("powerupSound");
+        const levelUpSound = document.getElementById("levelUpSound");
+        
+        // Game settings
+        canvas.width = 600;
+        canvas.height = 500;
+        const laneHeight = 50;
+        const numLanes = 10;
+        let gameSpeed = 1;
+        let score = 0;
+        let coinsCollected = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let gameRunning = false;
+        let gamePaused = false;
+        let animationFrameId;
+        let lastTimestamp = 0;
+        let deltaTime = 0;
+        let level = 1;
+        
+        // Player
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 70,
+            size: 40,
+            color: "#3498db",
+            shadowColor: "rgba(52, 152, 219, 0.5)",
+            moving: false,
+            moveSpeed: 200,
+            targetX: canvas.width / 2 - 20,
+            targetY: canvas.height - 70,
+            hasShield: false,
+            shieldTime: 0,
+            isSpeedBoosted: false,
+            speedBoostTime: 0,
+            hasCoinMagnet: false,
+            coinMagnetTime: 0,
+            invincible: false
+        };
+        
+        // Game elements
+        let cars = [];
+        let roads = [];
+        let coins = [];
+        let backgrounds = [];
+        let particles = [];
+        let powerUps = [];
+        let explosions = [];
+        
+        // Initialize game elements
+        function initGameElements() {
+            // Create roads
+            roads = [];
+            for (let i = 0; i < numLanes; i++) {
+                roads.push({
+                    y: i * laneHeight,
+                    color: i % 2 === 0 ? "#555" : "#444",
+                    hasMiddleLine: i % 2 === 0
+                });
+            }
+            
+            // Create cars
+            cars = [];
+            for (let i = 0; i < numLanes - 1; i++) {
+                const speed = (Math.random() * 100 + 100) * (i < 3 ? 0.7 : 1) * gameSpeed;
+                const width = Math.random() * 40 + 60;
+                const colors = ["#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const direction = Math.random() > 0.5 ? 1 : -1;
+                
+                cars.push({
+                    x: direction === 1 ? -width : canvas.width,
+                    y: i * laneHeight + 10,
+                    width: width,
+                    height: 30,
+                    speed: speed * direction,
+                    color: color,
+                    direction: direction,
+                    originalSpeed: speed * direction
+                });
+            }
+            
+            // Create coins
+            coins = [];
+            for (let i = 0; i < 5; i++) {
+                spawnCoin();
+            }
+            
+            // Create background elements
+            backgrounds = [];
+            for (let i = 0; i < 30; i++) {
+                backgrounds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 3 + 1,
+                    speed: Math.random() * 0.5 + 0.2,
+                    alpha: Math.random() * 0.5 + 0.1
+                });
+            }
+            
+            // Create initial power-up
+            setTimeout(() => {
+                spawnPowerUp();
+            }, 10000);
+        }
+        
+        function spawnCoin() {
+            coins.push({
+                x: Math.random() * (canvas.width - 30),
+                y: Math.random() * (canvas.height - 100),
+                size: 15,
+                collected: false,
+                value: 5,
+                magnetized: false
+            });
+        }
+        
+        function spawnPowerUp() {
+            if (!gameRunning || gamePaused) return;
+            
+            const types = ['shield', 'speed', 'magnet'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            powerUps.push({
+                x: Math.random() * (canvas.width - 40),
+                y: Math.random() * (canvas.height - 100),
+                size: 25,
+                type: type,
+                collected: false,
+                active: false
+            });
+            
+            // Schedule next power-up
+            setTimeout(() => {
+                spawnPowerUp();
+            }, Math.random() * 15000 + 10000);
+        }
+        
+        // Draw functions
+        function drawRoads() {
+            roads.forEach(road => {
+                ctx.fillStyle = road.color;
+                ctx.fillRect(0, road.y, canvas.width, laneHeight);
+                
+                if (road.hasMiddleLine) {
+                    ctx.strokeStyle = "#fff";
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([20, 20]);
+                    ctx.beginPath();
+                    ctx.moveTo(0, road.y + laneHeight / 2);
+                    ctx.lineTo(canvas.width, road.y + laneHeight / 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            });
+        }
+        
+        function drawPlayer() {
+            // Draw shield if active
+            if (player.hasShield) {
+                ctx.beginPath();
+                ctx.arc(player.x + player.size/2, player.y + player.size/2, player.size/2 + 5, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(0, 255, 255, 0.7)";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            
+            // Shadow
+            ctx.fillStyle = player.shadowColor;
+            ctx.fillRect(player.x + 3, player.y + 3, player.size, player.size);
+            
+            // Player - different color if speed boosted
+            ctx.fillStyle = player.isSpeedBoosted ? "#9b59b6" : player.color;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+            
+            // Player eyes
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(player.x + 10, player.y + 10, 8, 8);
+            ctx.fillRect(player.x + 22, player.y + 10, 8, 8);
+            
+            // Player mouth (smile)
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(player.x + 20, player.y + 25, 8, 0, Math.PI);
+            ctx.stroke();
+            
+            // Draw coin magnet effect if active
+            if (player.hasCoinMagnet) {
+                ctx.beginPath();
+                ctx.arc(player.x + player.size/2, player.y + player.size/2, 100, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 215, 0, 0.2)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+        
+        function drawCars() {
+            cars.forEach(car => {
+                // Car shadow
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
+                ctx.fillRect(car.x + 3, car.y + 3, car.width, car.height);
+                
+                // Car body
+                ctx.fillStyle = car.color;
+                ctx.fillRect(car.x, car.y, car.width, car.height);
+                
+                // Car windows
+                ctx.fillStyle = "rgba(255,255,255,0.3)";
+                const windowWidth = car.width / 4;
+                ctx.fillRect(car.x + 5, car.y + 5, windowWidth - 5, car.height - 10);
+                ctx.fillRect(car.x + car.width - windowWidth, car.y + 5, windowWidth - 5, car.height - 10);
+                
+                // Car lights
+                ctx.fillStyle = car.direction === 1 ? "#f39c12" : "#e74c3c";
+                ctx.fillRect(car.direction === 1 ? car.x + car.width - 10 : car.x, car.y + 10, 10, 10);
+            });
+        }
+        
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    // Draw glow effect
+                    if (coin.magnetized) {
+                        ctx.beginPath();
+                        ctx.arc(coin.x + coin.size/2, coin.y + coin.size/2, coin.size/2 + 3, 0, Math.PI * 2);
+                        ctx.fillStyle = "rgba(255, 215, 0, 0.3)";
+                        ctx.fill();
+                    }
+                    
+                    // Draw coin
+                    ctx.fillStyle = "#FFD700";
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.size/2, coin.y + coin.size/2, coin.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = "#F5D76E";
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.size/2, coin.y + coin.size/2, coin.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = "#C8B560";
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.size/2, coin.y + coin.size/2, coin.size/2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+        }
+        
+        function drawPowerUps() {
+            powerUps.forEach(powerUp => {
+                if (!powerUp.collected) {
+                    // Draw glow
+                    ctx.beginPath();
+                    ctx.arc(powerUp.x + powerUp.size/2, powerUp.y + powerUp.size/2, powerUp.size/2 + 3, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                    ctx.fill();
+                    
+                    // Draw power-up
+                    ctx.fillStyle = getPowerUpColor(powerUp.type);
+                    ctx.beginPath();
+                    ctx.arc(powerUp.x + powerUp.size/2, powerUp.y + powerUp.size/2, powerUp.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw icon
+                    ctx.fillStyle = "#fff";
+                    ctx.font = `bold ${powerUp.size}px Arial`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    
+                    let symbol = "";
+                    switch(powerUp.type) {
+                        case 'shield': symbol = "🛡️"; break;
+                        case 'speed': symbol = "⚡"; break;
+                        case 'magnet': symbol = "🧲"; break;
+                    }
+                    
+                    ctx.fillText(symbol, powerUp.x + powerUp.size/2, powerUp.y + powerUp.size/2);
+                }
+            });
+        }
+        
+        function getPowerUpColor(type) {
+            switch(type) {
+                case 'shield': return "rgba(0, 150, 255, 0.9)";
+                case 'speed': return "rgba(150, 0, 255, 0.9)";
+                case 'magnet': return "rgba(255, 200, 0, 0.9)";
+                default: return "#fff";
+            }
+        }
+        
+        function drawBackground() {
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGradient.addColorStop(0, "#1a2a6c");
+            skyGradient.addColorStop(1, "#000");
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Stars
+            backgrounds.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+        }
+        
+        function drawParticles() {
+            particles.forEach((particle, index) => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.alpha;
+                ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+                ctx.globalAlpha = 1;
+                
+                // Update particle
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.alpha -= 0.02;
+                particle.size *= 0.98;
+                
+                // Remove faded particles
+                if (particle.alpha <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        
+        function drawExplosions() {
+            explosions.forEach((explosion, index) => {
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, ${100 + explosion.frame * 5}, 0, ${1 - explosion.frame/20})`;
+                ctx.fill();
+                
+                explosion.radius += 2;
+                explosion.frame++;
+                
+                if (explosion.frame >= 20) {
+                    explosions.splice(index, 1);
+                }
+            });
+        }
+        
+        // Update functions
+        function updateCars(deltaTime) {
+            cars.forEach(car => {
+                // Reset to original speed if player's speed boost ends
+                if (!player.isSpeedBoosted && Math.abs(car.speed) !== Math.abs(car.originalSpeed)) {
+                    car.speed = car.originalSpeed;
+                }
+                
+                car.x += car.speed * deltaTime;
+                
+                // Wrap around screen
+                if (car.speed > 0 && car.x > canvas.width) {
+                    car.x = -car.width;
+                } else if (car.speed < 0 && car.x + car.width < 0) {
+                    car.x = canvas.width;
+                }
+            });
+        }
+        
+        function updatePlayer(deltaTime) {
+            // Smooth movement
+            if (player.moving) {
+                const dx = player.targetX - player.x;
+                const dy = player.targetY - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 1) {
+                    const moveSpeed = player.isSpeedBoosted ? player.moveSpeed * 1.5 : player.moveSpeed;
+                    const moveX = (dx / distance) * moveSpeed * deltaTime;
+                    const moveY = (dy / distance) * moveSpeed * deltaTime;
+                    
+                    player.x += Math.abs(moveX) > Math.abs(dx) ? dx : moveX;
+                    player.y += Math.abs(moveY) > Math.abs(dy) ? dy : moveY;
+                } else {
+                    player.x = player.targetX;
+                    player.y = player.targetY;
+                    player.moving = false;
+                }
+            }
+            
+            // Update power-up timers
+            if (player.hasShield) {
+                player.shieldTime -= deltaTime;
+                if (player.shieldTime <= 0) {
+                    player.hasShield = false;
+                    player.invincible = false;
+                    shieldIndicator.style.display = "none";
+                }
+            }
+            
+            if (player.isSpeedBoosted) {
+                player.speedBoostTime -= deltaTime;
+                if (player.speedBoostTime <= 0) {
+                    player.isSpeedBoosted = false;
+                    player.moveSpeed = 200;
+                }
+            }
+            
+            if (player.hasCoinMagnet) {
+                player.coinMagnetTime -= deltaTime;
+                if (player.coinMagnetTime <= 0) {
+                    player.hasCoinMagnet = false;
+                    // Reset any magnetized coins
+                    coins.forEach(coin => {
+                        coin.magnetized = false;
+                    });
+                }
+            }
+        }
+        
+        function updateBackground(deltaTime) {
+            backgrounds.forEach(star => {
+                star.y += star.speed * gameSpeed * deltaTime;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            });
+        }
+        
+        function updateCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected && player.hasCoinMagnet) {
+                    // Calculate distance to player
+                    const dx = (player.x + player.size/2) - (coin.x + coin.size/2);
+                    const dy = (player.y + player.size/2) - (coin.y + coin.size/2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 100) { // Magnet range
+                        coin.magnetized = true;
+                        // Move coin toward player
+                        const speed = 5;
+                        coin.x += (dx / distance) * speed;
+                        coin.y += (dy / distance) * speed;
+                    } else {
+                        coin.magnetized = false;
+                    }
+                }
+            });
+        }
+        
+        // Collision and game logic
+        function checkCollisions() {
+            // Check car collisions
+            const playerRect = {
+                x: player.x + 5,
+                y: player.y + 5,
+                width: player.size - 10,
+                height: player.size - 10
+            };
+            
+            for (const car of cars) {
+                if (!player.invincible && 
+                    playerRect.y < car.y + car.height &&
+                    playerRect.y + playerRect.height > car.y &&
+                    playerRect.x < car.x + car.width &&
+                    playerRect.x + playerRect.width > car.x) {
+                    
+                    // Create explosion
+                    createExplosion(player.x + player.size/2, player.y + player.size/2);
+                    
+                    if (player.hasShield) {
+                        // Shield protects but breaks
+                        player.hasShield = false;
+                        player.invincible = false;
+                        shieldIndicator.style.display = "none";
+                        createParticles(player.x + player.size/2, player.y + player.size/2, 15, "#00ffff");
+                    } else {
+                        crashSound.play().catch(e => console.log("Audio play error:", e));
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+            
+            // Check coin collection
+            coins.forEach((coin, index) => {
+                if (!coin.collected && 
+                    player.x < coin.x + coin.size &&
+                    player.x + player.size > coin.x &&
+                    player.y < coin.y + coin.size &&
+                    player.y + player.size > coin.y) {
+                    
+                    coin.collected = true;
+                    score += coin.value;
+                    coinsCollected++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    coinCountDisplay.textContent = `Coins: ${coinsCollected}`;
+                    coinSound.play().catch(e => console.log("Audio play error:", e));
+                    createParticles(coin.x + coin.size/2, coin.y + coin.size/2, 10, "#FFD700");
+                    
+                    // Add new coin
+                    setTimeout(() => {
+                        spawnCoin();
+                    }, 1000);
+                }
+            });
+            
+            // Check power-up collection
+            powerUps.forEach((powerUp, index) => {
+                if (!powerUp.collected && 
+                    player.x < powerUp.x + powerUp.size &&
+                    player.x + player.size > powerUp.x &&
+                    player.y < powerUp.y + powerUp.size &&
+                    player.y + player.size > powerUp.y) {
+                    
+                    powerUp.collected = true;
+                    powerupSound.play().catch(e => console.log("Audio play error:", e));
+                    createParticles(powerUp.x + powerUp.size/2, powerUp.y + powerUp.size/2, 15, getPowerUpColor(powerUp.type));
+                    
+                    // Apply power-up effect
+                    switch(powerUp.type) {
+                        case 'shield':
+                            player.hasShield = true;
+                            player.invincible = true;
+                            player.shieldTime = 10; // 10 seconds
+                            shieldIndicator.style.display = "block";
+                            setTimeout(() => {
+                                if (player.hasShield) {
+                                    shieldIndicator.style.display = "none";
+                                }
+                            }, 10000);
+                            break;
+                        case 'speed':
+                            player.isSpeedBoosted = true;
+                            player.speedBoostTime = 8; // 8 seconds
+                            player.moveSpeed = 300;
+                            break;
+                        case 'magnet':
+                            player.hasCoinMagnet = true;
+                            player.coinMagnetTime = 12; // 12 seconds
+                            break;
+                    }
+                    
+                    powerUps.splice(index, 1);
+                }
+            });
+            
+            // Check win condition (reached top)
+            if (player.y <= 0) {
+                score += 10 * level;
+                level++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                levelUpSound.play().catch(e => console.log("Audio play error:", e));
+                createParticles(player.x + player.size/2, player.y + player.size/2, 20, "#3498db");
+                resetPlayerPosition();
+                increaseDifficulty();
+            }
+        }
+        
+        function createExplosion(x, y) {
+            explosions.push({
+                x: x,
+                y: y,
+                radius: 10,
+                frame: 0
+            });
+        }
+        
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 6 + 3,
+                    color: color,
+                    vx: Math.random() * 6 - 3,
+                    vy: Math.random() * 6 - 3,
+                    alpha: 1
+                });
+            }
+        }
+        
+        function increaseDifficulty() {
+            gameSpeed *= 1.1;
+            cars.forEach(car => {
+                car.originalSpeed *= 1.1;
+                car.speed = car.originalSpeed;
+            });
+        }
+        
+        function resetPlayerPosition() {
+            player.x = canvas.width / 2 - 20;
+            player.y = canvas.height - 70;
+            player.targetX = player.x;
+            player.targetY = player.y;
+            player.moving = false;
+        }
+        
+        // Game state functions
+        function startGame() {
+            score = 0;
+            coinsCollected = 0;
+            level = 1;
+            gameSpeed = 1;
+            scoreDisplay.textContent = `Score: ${score}`;
+            coinCountDisplay.textContent = `Coins: ${coinsCollected}`;
+            startScreen.style.display = "none";
+            gameOverScreen.style.display = "none";
+            pauseScreen.style.display = "none";
+            gameRunning = true;
+            gamePaused = false;
+            initGameElements();
+            resetPlayerPosition();
+            lastTimestamp = performance.now();
+            gameLoop(lastTimestamp);
+        }
+        
+        function pauseGame() {
+            gamePaused = true;
+            pauseScreen.style.display = "flex";
+            currentScoreDisplay.textContent = `Score: ${score}`;
+            cancelAnimationFrame(animationFrameId);
+        }
+        
+        function resumeGame() {
+            gamePaused = false;
+            pauseScreen.style.display = "none";
+            lastTimestamp = performance.now();
+            gameLoop(lastTimestamp);
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            finalScoreDisplay.textContent = `Your Score: ${score}`;
+            coinsCollectedDisplay.textContent = `Coins Collected: ${coinsCollected}`;
+            
+            if (score > highScore) {
+                highScore = score;
+                highScoreDisplay.textContent = `High Score: ${highScore}`;
+                localStorage.setItem('highScore', highScore);
+            }
+            
+            gameOverScreen.style.display = "flex";
+            cancelAnimationFrame(animationFrameId);
+        }
+        
+        // Main game loop
+        function gameLoop(timestamp) {
+            if (!gameRunning || gamePaused) return;
+            
+            deltaTime = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+            
+            // Update game state
+            updatePlayer(deltaTime);
+            updateCars(deltaTime);
+            updateBackground(deltaTime);
+            updateCoins();
+            checkCollisions();
+            
+            // Draw everything
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawRoads();
+            drawCars();
+            drawCoins();
+            drawPowerUps();
+            drawPlayer();
+            drawParticles();
+            drawExplosions();
+            
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Event listeners
+        startButton.addEventListener("click", startGame);
+        restartButton.addEventListener("click", startGame);
+        resumeButton.addEventListener("click", resumeGame);
+        quitButton.addEventListener("click", () => {
+            window.location.href = "menu.html";
+        });
+        menuButton.addEventListener("click", () => {
+            window.location.href = "menu.html";
+        });
+        menuButtonStart.addEventListener("click", () => {
+            window.location.href = "menu.html";
+        });
+        howToPlayBtn.addEventListener("click", () => {
+            startScreen.style.display = "none";
+            howToPlayScreen.style.display = "flex";
+        });
+        backToMenuBtn.addEventListener("click", () => {
+            howToPlayScreen.style.display = "none";
+            startScreen.style.display = "flex";
+        });
+        
+        // Keyboard controls
+        window.addEventListener("keydown", (e) => {
+            if (!gameRunning) return;
+            
+            if (e.key === "Escape" || e.key === "p") {
+                if (gamePaused) {
+                    resumeGame();
+                } else {
+                    pauseGame();
+                }
+                return;
+            }
+            
+            if (gamePaused) return;
+            
+            const moveAmount = 50;
+            let newX = player.targetX;
+            let newY = player.targetY;
+            
+            switch(e.key) {
+                case "ArrowUp":
+                    newY = Math.max(player.targetY - moveAmount, 0);
+                    break;
+                case "ArrowDown":
+                    newY = Math.min(player.targetY + moveAmount, canvas.height - player.size);
+                    break;
+                case "ArrowLeft":
+                    newX = Math.max(player.targetX - moveAmount, 0);
+                    break;
+                case "ArrowRight":
+                    newX = Math.min(player.targetX + moveAmount, canvas.width - player.size);
+                    break;
+            }
+            
+            // Only move if position changed and not already moving
+            if ((newX !== player.targetX || newY !== player.targetY) && !player.moving) {
+                player.targetX = newX;
+                player.targetY = newY;
+                player.moving = true;
+            }
+        });
+        
+        // Mobile controls
+        function setupMobileButton(btn, direction) {
+            btn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                if (!gameRunning || gamePaused) return;
+                
+                const moveAmount = 50;
+                let newX = player.targetX;
+                let newY = player.targetY;
+                
+                switch(direction) {
+                    case "up":
+                        newY = Math.max(player.targetY - moveAmount, 0);
+                        break;
+                    case "down":
+                        newY = Math.min(player.targetY + moveAmount, canvas.height - player.size);
+                        break;
+                    case "left":
+                        newX = Math.max(player.targetX - moveAmount, 0);
+                        break;
+                    case "right":
+                        newX = Math.min(player.targetX + moveAmount, canvas.width - player.size);
+                        break;
+                }
+                
+                if ((newX !== player.targetX || newY !== player.targetY) && !player.moving) {
+                    player.targetX = newX;
+                    player.targetY = newY;
+                    player.moving = true;
+                }
+            });
+            
+            // Also work with mouse clicks for testing
+            btn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                if (!gameRunning || gamePaused) return;
+                
+                const moveAmount = 50;
+                let newX = player.targetX;
+                let newY = player.targetY;
+                
+                switch(direction) {
+                    case "up":
+                        newY = Math.max(player.targetY - moveAmount, 0);
+                        break;
+                    case "down":
+                        newY = Math.min(player.targetY + moveAmount, canvas.height - player.size);
+                        break;
+                    case "left":
+                        newX = Math.max(player.targetX - moveAmount, 0);
+                        break;
+                    case "right":
+                        newX = Math.min(player.targetX + moveAmount, canvas.width - player.size);
+                        break;
+                }
+                
+                if ((newX !== player.targetX || newY !== player.targetY) && !player.moving) {
+                    player.targetX = newX;
+                    player.targetY = newY;
+                    player.moving = true;
+                }
+            });
+        }
+        
+        setupMobileButton(upBtn, "up");
+        setupMobileButton(downBtn, "down");
+        setupMobileButton(leftBtn, "left");
+        setupMobileButton(rightBtn, "right");
+        
+        // Touch controls for pause
+        canvas.addEventListener("touchstart", (e) => {
+            if (!gameRunning) return;
+            if (gamePaused) {
+                resumeGame();
+            } else {
+                pauseGame();
+            }
+        });
+        
+        // Initialize high score display
+        highScoreDisplay.textContent = `High Score: ${highScore}`;
+        
+        // Preload audio
+        window.addEventListener("click", () => {
+            // This will allow audio to play after first user interaction
+        }, { once: true });
+    </script>
+</body>
+</html>
