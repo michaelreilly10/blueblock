@@ -20,10 +20,32 @@
 
         .menu-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
             padding: 10px;
+            position: relative;
+        }
+
+        .mobile-switch-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .mobile-switch-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .menu {
@@ -45,68 +67,55 @@
             padding: 0;
         }
 
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
 
-        .space-mode-section {
-            margin: 1.5rem 0;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-        }
-
-        .space-mode-section h2 {
-            margin: 0 0 1rem 0;
-            color: #ffaa00;
-            font-size: 1.3rem;
-            text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
-        }
-
-        .space-mode-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            position: relative;
-        }
-
-        .menu button {
-            display: block;
-            width: 100%;
-            padding: 0.8rem;
-            margin: 0 auto;
-            font-size: 1rem;
-            font-weight: bold;
-            color: white;
-            background: rgba(0, 170, 255, 0.8);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+        .game-card {
+            background: rgba(0, 0, 0, 0.5);
             border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-            position: relative;
             overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .menu button:hover {
-            background: rgba(255, 170, 0, 0.8);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .menu button:active {
-            transform: translateY(0);
+        .game-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
         }
 
-        .space-mode-buttons button {
-            background: rgba(153, 50, 204, 0.8);
+        .game-title {
+            padding: 0.8rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin: 0;
         }
 
-        .space-mode-buttons button:hover {
-            background: rgba(255, 105, 180, 0.8);
+        .game-title:hover {
+            background-color: rgba(0, 170, 255, 0.2);
+        }
+
+        .section-title {
+            margin: 2rem 0 1rem 0;
+            color: #ffaa00;
+            font-size: 1.5rem;
+            text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+            text-align: left;
+            padding-left: 0.5rem;
+            border-left: 3px solid #00aaff;
         }
 
         .menu button.controls-btn {
@@ -114,44 +123,15 @@
             background: rgba(85, 85, 85, 0.8);
             font-size: 0.9rem;
             padding: 0.7rem;
+            width: auto;
+            display: inline-block;
         }
 
         .menu button.controls-btn:hover {
             background: rgba(119, 119, 119, 0.8);
         }
 
-        /* Most Popular Ribbon */
-        .popular-ribbon {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            background: #ff0000;
-            color: white;
-            font-size: 0.7rem;
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 3px;
-            transform: rotate(15deg);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            z-index: 1;
-            animation: wiggle 1s infinite alternate;
-        }
-
-        .popular-ribbon::before {
-            content: "";
-            position: absolute;
-            top: 100%;
-            right: 0;
-            border-width: 5px;
-            border-style: solid;
-            border-color: #cc0000 transparent transparent #cc0000;
-        }
-
-        @keyframes wiggle {
-            0% { transform: rotate(15deg) scale(1); }
-            100% { transform: rotate(20deg) scale(1.05); }
-        }
-
+        /* Modal styles remain the same */
         .modal {
             display: none;
             position: fixed;
@@ -248,37 +228,32 @@
         }
 
         /* Responsive adjustments */
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
+            .game-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .game-thumbnail {
+                height: 100px;
+            }
+            
+            .section-title {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .game-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
             .menu {
                 padding: 1.2rem;
             }
             
             .menu h1 {
-                margin-bottom: 1rem;
                 font-size: 1.8rem;
-            }
-            
-            .menu button {
-                font-size: 0.9rem;
-                padding: 0.7rem;
-            }
-            
-            .space-mode-section h2 {
-                font-size: 1.1rem;
-            }
-            
-            .modal-content {
-                padding: 1rem;
-            }
-            
-            .modal-content table td {
-                padding: 0.5rem;
-                font-size: 0.9rem;
-            }
-
-            .popular-ribbon {
-                font-size: 0.6rem;
-                padding: 2px 6px;
             }
         }
 
@@ -289,46 +264,101 @@
             
             .menu h1 {
                 font-size: 1.5rem;
-                margin-bottom: 0.8rem;
             }
             
-            .menu button {
-                padding: 0.6rem;
-                font-size: 0.9rem;
-            }
-            
-            .menu-buttons, .space-mode-buttons {
-                gap: 0.6rem;
-            }
-            
-            .space-mode-section {
-                margin: 1rem 0;
-                padding-top: 1rem;
+            .game-thumbnail {
+                height: 80px;
             }
         }
     </style>
 </head>
 <body>
     <div class="menu-container">
+        <!-- Added mobile switch button here -->
+        <button class="mobile-switch-btn" onclick="window.location.href='menu.html'">
+            Switch to computer
+        </button>
+        
         <div class="menu">
-            <h1>Blue Block Games</h1>
-            <div class="menu-buttons">
-                <button onclick="window.location.href='blockystory.html'">Story Mode</button>
-                <button onclick="window.location.href='spacebossmode 3.0.html'">Boss Mode</button>
-                
-            </div>
-
-            <div class="space-mode-section">
-                <h1>Extras</h1>
-             <div class="space-mode-buttons">
-                <button onclick="window.location.href='dot game.html'">Dot Dodge</button>
-                <button onclick="window.location.href='multiplayer1.0.html'">Dot Dodge Two-Player</button>
-                <button onclick="window.location.href='blockyroad2.0.html'">Blocky Road</button>
-                <button onclick="window.location.href='Blocky Road CC.html'">Blocky Road Coin Collector</button>
-                <button onclick="window.location.href='stack2.html'">Stack</button>
-                <button onclick="window.location.href='astroids.html'">Asteroids</button>
-                <button onclick="window.location.href='space shooter.html'">Space Shooter</button>
+            <h1>Blue Block Games Mobile</h1>
+            
+            <h2 class="section-title">Main Games</h2>
+            <div class="game-grid">
+                <div class="game-card">
+                    <img src="Story Mode.png" 
+                         alt="Story Mode" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='blockystorymobile.html'">
+                    <div class="game-title" onclick="window.location.href='blockystorymobile.html'">Story Mode</div>
                 </div>
+                
+                <div class="game-card">
+                    <img src="Boss Mode.png" 
+                         alt="Boss Mode" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='spacebossmode mobile.html'">
+                    <div class="game-title" onclick="window.location.href='spacebossmode mobile.html'">Boss Mode</div>
+                </div>
+            </div>
+            
+            <h2 class="section-title">Extras</h2>
+            <div class="game-grid">
+                <div class="game-card">
+                    <img src="Dot Dodge.png" 
+                         alt="Dot Dodge" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='dot dodge mobile.html'">
+                    <div class="game-title" onclick="window.location.href='dot dodge mobile.html'">Dot Dodge</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="lasers.png" 
+                         alt="lasers" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='multiplayer1.0.html'">
+                    <div class="game-title" onclick="window.location.href='multiplayer1.0.html'">Dot Dodge Two-Player</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="Blocky Road.png" 
+                         alt="Blocky Road" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='blockroad mobile.html'">
+                    <div class="game-title" onclick="window.location.href='blockroad mobile.html'">Blocky Road</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="Blocky Road CC.png" 
+                         alt="Blocky Road Coin Collector" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='Blocky Road CC.html'">
+                    <div class="game-title" onclick="window.location.href='Blocky Road CC.html'">Blocky Road Coin Collector</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="stack.png" 
+                         alt="Stack" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='stack2.html'">
+                    <div class="game-title" onclick="window.location.href='stack2.html'">Stack</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="Astriods.png" 
+                         alt="Asteroids" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='astriods mobile.html'">
+                    <div class="game-title" onclick="window.location.href='astriods mobile.html'">Asteroids</div>
+                </div>
+                
+                <div class="game-card">
+                    <img src="space shooter.png" 
+                         alt="Space Shooter" 
+                         class="game-thumbnail" 
+                         onclick="window.location.href='space shooter mobile.html'">
+                    <div class="game-title" onclick="window.location.href='space shooter mobile.html'">Space Shooter</div>
+                </div>
+                
             </div>
 
             <button class="controls-btn" onclick="openControls()">Controls</button>
@@ -342,32 +372,29 @@
             <table>
                 <tr>
                     <td>Move</td>
-                    <td> Arrow keys  (A and D keys in multiplayer) </td>
+                    <td>Touch a side/Joystick/Swipe</td>
                 </tr>
                 <tr>
                     <td>Pause</td>
-                    <td> pause button/P/Space (varies in game modes) </td>
+                    <td>pause button</td>
                 </tr>
                 <tr>
-                    <td>Shoot (if avaliable)</td>
-                    <td> Space or left click</td>
+                    <td>Shoot (if available)</td>
+                    <td>Tap or fire button</td>
                 </tr>
                 <tr>
                     <td>Dark Mode (Dot Dodge)</td>
-                    <td> D or L</td>
+                    <td>button</td>
                 </tr>
                 <tr>
-                    <td>Menu </td>
+                    <td>Menu</td>
                     <td>Menu button</td>
                 </tr>
                 <tr>
                     <td>Fart</td>
                     <td>F</td>
                 </tr>
-                <tr>
-                    <td>Touch Controls</td>
-                    <td>Touch left/right side of screen to move</td>
-                </tr>
+                
             </table>
             <button class="close-btn" onclick="closeControls()">Close</button>
         </div>

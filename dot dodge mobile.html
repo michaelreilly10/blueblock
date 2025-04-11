@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dot Dodge Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: white; }
+        canvas { display: block; background: white; }
+        #score, #highScore, #multiplier {
+            position: absolute;
+            top: 10px;
+            color: #00aaff;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        #score { left: 10px; }
+        #highScore { right: 10px; }
+        #multiplier { top: 40px; left: 10px; color: #ffaa00; }
+
+        #gameOver, #pauseMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+            color: #333;
+            font-family: Arial, sans-serif;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #gameOver h1, #pauseMenu h1 {
+            font-size: 60px;
+            margin: 0;
+            animation: pulse 1.5s infinite;
+            color: #ff4444;
+        }
+
+        #pauseMenu h1 {
+            animation: none;
+            color: #00aaff;
+        }
+
+        #gameOver p, #pauseMenu p {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #333;
+        }
+
+        #gameOver button, #pauseMenu button {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin: 10px;
+            background: #00aaff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        #gameOver button:hover, #pauseMenu button:hover {
+            background: #ffaa00;
+        }
+
+        #newHighScore {
+            font-size: 30px;
+            color: #ffaa00;
+            display: none;
+            margin: 10px 0;
+        }
+
+        #pauseButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            padding: 5px 15px;
+            background: #00aaff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+            z-index: 100;
+        }
+
+        #pauseButton:hover {
+            background: #ffaa00;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        body.dark-mode { background: black; }
+        body.dark-mode canvas { background: black; }
+        body.dark-mode #score,
+        body.dark-mode #highScore,
+        body.dark-mode #multiplier,
+        body.dark-mode #gameOver h1,
+        body.dark-mode #gameOver p,
+        body.dark-mode #newHighScore,
+        body.dark-mode #pauseMenu h1,
+        body.dark-mode #pauseMenu p {
+            color: #ffffff;
+        }
+        body.dark-mode #gameOver,
+        body.dark-mode #pauseMenu {
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <button id="pauseButton">Pause</button>
+    <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
+    <div id="multiplier">Multiplier: x1</div>
+    
+    <div id="gameOver">
+        <h1>Game Over</h1>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <div id="newHighScore">NEW HIGH SCORE!</div>
+        <button id="restart">Restart</button>
+        <button id="menu">Menu</button>
+    </div>
+    
+    <div id="pauseMenu">
+        <h1>Game Paused</h1>
+        <button id="resume">Resume</button>
+        <button id="restartFromPause">Restart</button>
+        <button id="menuFromPause">Menu</button>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Audio elements for sound effects -->
+    <audio id="collectSound" src="collect.wav"></audio>
+    <audio id="collisionSound" src="boss_hit.wav"></audio>
+    <audio id="gameOverSound" src="gameover.wav"></audio>
+    <audio id="bombSound" src="bomb.wav"></audio>
+    <audio id="pauseSound" src="pause.wav"></audio>
+    <audio id="buttonSound" src=""></audio>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+        const highScoreDisplay = document.getElementById("highScore");
+        const multiplierDisplay = document.getElementById("multiplier");
+        const gameOverScreen = document.getElementById("gameOver");
+        const finalScoreDisplay = document.getElementById("finalScore");
+        const newHighScoreDisplay = document.getElementById("newHighScore");
+        const restartButton = document.getElementById("restart");
+        const menuButton = document.getElementById("menu");
+        const pauseButton = document.getElementById("pauseButton");
+        const pauseMenu = document.getElementById("pauseMenu");
+        const resumeButton = document.getElementById("resume");
+        const restartFromPause = document.getElementById("restartFromPause");
+        const menuFromPause = document.getElementById("menuFromPause");
+        const body = document.body;
+
+        // Audio elements
+        const collectSound = document.getElementById("collectSound");
+        const collisionSound = document.getElementById("collisionSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const bombSound = document.getElementById("bombSound");
+        const pauseSound = document.getElementById("pauseSound");
+        const buttonSound = document.getElementById("buttonSound");
+
+        // Preload sounds
+        [collectSound, collisionSound, gameOverSound, bombSound, pauseSound, buttonSound].forEach(sound => {
+            sound.volume = 0.5;
+            sound.load();
+        });
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let player = { 
+            x: canvas.width / 2, 
+            y: canvas.height - 50, 
+            size: 20, 
+            speed: 0,
+            maxSpeed: 7,
+            acceleration: 0.2,
+            deceleration: 0.1,
+            attachedBlocks: [] 
+        };
+        let obstacles = [];
+        let blueBlocks = [];
+        let keys = {};
+        let gameRunning = true;
+        let score = 0;
+        let highScore = localStorage.getItem("highScore") || 0;
+        let scoreMultiplier = 1;
+        let difficultyMultiplier = 1;
+        let speedIncreaseRate = 0.005;
+        let isPaused = false;
+        let shakeIntensity = 0;
+        let isDarkMode = false;
+        let lastUpdateTime = 0;
+
+        highScoreDisplay.textContent = "High Score: " + highScore;
+
+        // Event listeners
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " ") {
+                togglePause();
+            } else if (e.key === "d" || e.key === "D") {
+                toggleDarkMode();
+            } else {
+                keys[e.key] = true;
+            }
+        });
+        
+        window.addEventListener("keyup", (e) => keys[e.key] = false);
+        
+        // Touch controls
+        canvas.addEventListener("touchstart", handleTouchStart);
+        canvas.addEventListener("touchmove", handleTouchMove);
+        canvas.addEventListener("touchend", handleTouchEnd);
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            handleTouchMove(e);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touchX = e.touches[0].clientX;
+            
+            // Clear all movement keys
+            keys["ArrowLeft"] = false;
+            keys["ArrowRight"] = false;
+            
+            // Set movement based on touch position
+            if (touchX < canvas.width / 2) {
+                keys["ArrowLeft"] = true;
+            } else {
+                keys["ArrowRight"] = true;
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            keys["ArrowLeft"] = false;
+            keys["ArrowRight"] = false;
+        }
+        
+        pauseButton.addEventListener("click", togglePause);
+        resumeButton.addEventListener("click", togglePause);
+        restartFromPause.addEventListener("click", () => {
+            buttonSound.play();
+            location.reload();
+        });
+        menuFromPause.addEventListener("click", () => {
+            buttonSound.play();
+            window.location.href = "menu2.html";
+        });
+        restartButton.addEventListener("click", () => {
+            buttonSound.play();
+            location.reload();
+        });
+        menuButton.addEventListener("click", () => {
+            buttonSound.play();
+            window.location.href = "menu2.html";
+        });
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseSound.play();
+            
+            if (isPaused) {
+                pauseMenu.style.display = "block";
+                pauseButton.textContent = "Resume";
+                lastUpdateTime = 0;
+            } else {
+                pauseMenu.style.display = "none";
+                pauseButton.textContent = "Pause";
+                lastUpdateTime = Date.now();
+                if (gameRunning) {
+                    requestAnimationFrame(gameLoop);
+                }
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            body.classList.toggle("dark-mode", isDarkMode);
+            buttonSound.play();
+        }
+
+        function checkCollision(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < a.size / 2 + b.size / 2;
+        }
+
+        function attachBlockToPlayer(block) {
+            let attachX = block.x - player.x;
+            let attachY = block.y - player.y;
+            player.attachedBlocks.push({ x: attachX, y: attachY, size: block.size });
+            collectSound.currentTime = 0;
+            collectSound.play();
+        }
+
+        function shakeScreen() {
+            shakeIntensity = 10;
+            bombSound.currentTime = 0;
+            bombSound.play();
+        }
+
+        function update() {
+            if (isPaused) return;
+
+            const now = Date.now();
+            const deltaTime = lastUpdateTime ? now - lastUpdateTime : 16;
+            lastUpdateTime = now;
+
+            if (keys["ArrowLeft"]) {
+                player.speed = Math.max(player.speed - player.acceleration * (deltaTime / 16), -player.maxSpeed);
+            } else if (keys["ArrowRight"]) {
+                player.speed = Math.min(player.speed + player.acceleration * (deltaTime / 16), player.maxSpeed);
+            } else {
+                if (player.speed > 0) {
+                    player.speed = Math.max(player.speed - player.deceleration * (deltaTime / 16), 0);
+                } else if (player.speed < 0) {
+                    player.speed = Math.min(player.speed + player.deceleration * (deltaTime / 16), 0);
+                }
+            }
+
+            player.x += player.speed * (deltaTime / 16);
+
+            if (player.x < 0) {
+                player.x = 0;
+                player.speed = 0;
+            } else if (player.x > canvas.width - player.size) {
+                player.x = canvas.width - player.size;
+                player.speed = 0;
+            }
+
+            obstacles.forEach((obs, index) => {
+                obs.y += obs.speed * difficultyMultiplier * (deltaTime / 16);
+
+                if (obs.type === "zigzag") {
+                    obs.x += Math.sin(obs.y / 20) * 3 * (deltaTime / 16);
+                } else if (obs.type === "spinningTriangle") {
+                    obs.x += Math.sin(obs.y / 30) * 4 * (deltaTime / 16);
+                    obs.rotation += 0.1 * (deltaTime / 16);
+                }
+
+                if (obs.y > canvas.height) {
+                    if (obs.type === "bomb") {
+                        shakeScreen();
+                    }
+                    obstacles.splice(index, 1);
+                    score += scoreMultiplier;
+                    scoreDisplay.textContent = "Score: " + score;
+                    difficultyMultiplier += speedIncreaseRate * (deltaTime / 16);
+                }
+
+                if (checkCollision(obs, player)) {
+                    collisionSound.currentTime = 0;
+                    collisionSound.play();
+                    gameRunning = false;
+                }
+
+                player.attachedBlocks.forEach(block => {
+                    let hitbox = { x: player.x + block.x, y: player.y + block.y, size: block.size };
+                    if (checkCollision(obs, hitbox)) {
+                        collisionSound.currentTime = 0;
+                        collisionSound.play();
+                        gameRunning = false;
+                    }
+                });
+            });
+
+            blueBlocks.forEach((block, index) => {
+                block.y += block.speed * (deltaTime / 16);
+
+                blueBlocks.forEach(otherBlock => {
+                    if (block !== otherBlock && checkCollision(block, otherBlock)) {
+                        block.y = otherBlock.y - block.size;
+                    }
+                });
+
+                if (block.y > canvas.height) {
+                    blueBlocks.splice(index, 1);
+                    return;
+                }
+
+                let collected = checkCollision(block, player) || 
+                                player.attachedBlocks.some(attachedBlock => 
+                                    checkCollision(block, { 
+                                        x: player.x + attachedBlock.x, 
+                                        y: player.y + attachedBlock.y, 
+                                        size: attachedBlock.size 
+                                    })
+                                );
+
+                if (collected) {
+                    attachBlockToPlayer(block);
+                    blueBlocks.splice(index, 1);
+                    scoreMultiplier += 1;
+                    multiplierDisplay.textContent = "Multiplier: x" + scoreMultiplier;
+                }
+            });
+
+            if (Math.random() < 0.02 * difficultyMultiplier * (deltaTime / 16)) {
+                let size = 40 + Math.random() * 30;
+                let speed = 3 + Math.random() * 4;
+                let type = Math.random() < 0.3 ? "zigzag" : 
+                           Math.random() < 0.5 ? "spinningTriangle" : 
+                           Math.random() < 0.7 ? "bomb" : "normal";
+                obstacles.push({ x: Math.random() * (canvas.width - size), y: 0, size, speed, type, rotation: 0 });
+            }
+
+            if (Math.random() < 0.005 * (deltaTime / 16)) {
+                blueBlocks.push({ x: Math.random() * (canvas.width - 20), y: 0, size: 20, speed: 3 });
+            }
+        }
+
+        function draw() {
+            if (shakeIntensity > 0) {
+                ctx.setTransform(1, 0, 0, 1, (Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity);
+                shakeIntensity -= 0.5;
+            } else {
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isDarkMode) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "blue";
+            } else {
+                ctx.shadowBlur = 0;
+            }
+            ctx.fillStyle = "blue";
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+
+            player.attachedBlocks.forEach(block => {
+                if (isDarkMode) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "blue";
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fillRect(player.x + block.x, player.y + block.y, block.size, block.size);
+            });
+
+            obstacles.forEach(obs => {
+                if (isDarkMode) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = obs.type === "zigzag" ? "purple" : 
+                                      obs.type === "spinningTriangle" ? "silver" : 
+                                      obs.type === "bomb" ? "red" : "red";
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fillStyle = obs.type === "zigzag" ? "purple" : 
+                                obs.type === "spinningTriangle" ? "silver" : 
+                                obs.type === "bomb" ? "black" : "red";
+
+                if (obs.type === "spinningTriangle") {
+                    ctx.save();
+                    ctx.translate(obs.x + obs.size / 2, obs.y + obs.size / 2);
+                    ctx.rotate(obs.rotation);
+                    ctx.beginPath();
+                    ctx.moveTo(-obs.size / 2, obs.size / 2);
+                    ctx.lineTo(0, -obs.size / 2);
+                    ctx.lineTo(obs.size / 2, obs.size / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                } else if (obs.type === "bomb") {
+                    ctx.save();
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = "red";
+                    ctx.beginPath();
+                    ctx.arc(obs.x, obs.y, obs.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    ctx.fillRect(obs.x, obs.y, obs.size, obs.size);
+                }
+            });
+
+            blueBlocks.forEach(block => {
+                if (isDarkMode) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "blue";
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fillStyle = "blue";
+                ctx.fillRect(block.x, block.y, block.size, block.size);
+            });
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                if (!isPaused) {
+                    update();
+                    draw();
+                }
+                requestAnimationFrame(gameLoop);
+            } else {
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                    highScoreDisplay.textContent = "High Score: " + highScore;
+                    newHighScoreDisplay.style.display = "block";
+                }
+                finalScoreDisplay.textContent = score;
+                gameOverScreen.style.display = "block";
+                gameOverSound.currentTime = 0;
+                gameOverSound.play();
+                pauseButton.style.display = "none";
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 50;
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
