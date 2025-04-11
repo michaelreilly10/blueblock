@@ -23,6 +23,7 @@
     * {
       box-sizing: border-box;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     
     body {
@@ -36,6 +37,7 @@
       font-family: 'Orbitron', sans-serif;
       color: var(--text-color);
       text-shadow: var(--text-glow);
+      touch-action: manipulation;
     }
 
     #game-wrapper {
@@ -74,6 +76,107 @@
       overflow: hidden;
     }
 
+    /* Mobile controls */
+    #mobile-controls {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      display: none;
+      justify-content: center;
+      gap: 15px;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .mobile-btn {
+      width: 70px;
+      height: 70px;
+      background: rgba(66, 133, 244, 0.3);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 30px;
+      color: white;
+      touch-action: manipulation;
+      pointer-events: auto;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(66, 133, 244, 0.5);
+      transition: all 0.1s;
+    }
+
+    .mobile-btn:active {
+      transform: scale(0.9);
+      background: rgba(66, 133, 244, 0.6);
+    }
+
+    #mobile-dpad {
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left . right"
+        ". down .";
+      gap: 10px;
+    }
+
+    #up-btn { grid-area: up; }
+    #left-btn { grid-area: left; }
+    #down-btn { grid-area: down; }
+    #right-btn { grid-area: right; }
+
+    @media (max-width: 1024px) {
+      #mobile-controls {
+        display: flex;
+      }
+      
+      #game-wrapper {
+        flex-direction: column;
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+      }
+      
+      #safe-section {
+        width: 100%;
+        height: auto;
+        padding: 10px;
+        flex-direction: row;
+        align-items: center;
+        border-right: none;
+        border-bottom: 2px solid rgba(0, 255, 0, 0.5);
+      }
+      
+      #game-container {
+        width: 100%;
+        height: calc(100vh - 120px);
+      }
+      
+      #hud {
+        position: relative;
+        top: auto;
+        left: auto;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      
+      .hud-item {
+        padding: 5px 10px;
+        font-size: 14px;
+      }
+      
+      #controls {
+        display: none;
+      }
+      
+      #menu-button {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        margin-left: auto;
+      }
+    }
+
+    /* Rest of your existing CSS remains the same */
     #blue-block {
       position: absolute;
       width: 40px;
@@ -466,6 +569,17 @@
       
       <div id="collectibles-container"></div>
       
+      <!-- Mobile Controls -->
+      <div id="mobile-controls">
+        <div id="mobile-dpad">
+          <div class="mobile-btn" id="up-btn">↑</div>
+          <div class="mobile-btn" id="left-btn">←</div>
+          <div class="mobile-btn" id="down-btn">↓</div>
+          <div class="mobile-btn" id="right-btn">→</div>
+        </div>
+        <div class="mobile-btn" id="pause-btn">⏸</div>
+      </div>
+      
       <div id="level-complete-modal">
         <div class="modal-content">
           <h2>LEVEL COMPLETE!</h2>
@@ -487,6 +601,7 @@
       <div id="pause-overlay">
         <h2>GAME PAUSED</h2>
         <p>Press P to continue</p>
+        <button id="mobile-resume-btn">RESUME</button>
       </div>
       
       <div id="tutorial-overlay">
@@ -506,6 +621,7 @@
               <div class="key">→</div>
             </div>
             <p>Move your block</p>
+            <p>Or use the on-screen controls on mobile</p>
           </div>
           
           <div class="tutorial-section">
@@ -556,6 +672,14 @@
     const tutorialOverlay = document.getElementById('tutorial-overlay');
     const startGameBtn = document.getElementById('start-game-btn');
     const menuButton = document.getElementById('menu-button');
+    const mobileResumeBtn = document.getElementById('mobile-resume-btn');
+
+    // Mobile controls
+    const upBtn = document.getElementById('up-btn');
+    const downBtn = document.getElementById('down-btn');
+    const leftBtn = document.getElementById('left-btn');
+    const rightBtn = document.getElementById('right-btn');
+    const pauseBtn = document.getElementById('pause-btn');
 
     // Sound effects
     const laserSound = document.getElementById('laser-sound');
@@ -595,8 +719,9 @@
     let targetY = 280;
     const moveSpeed = 0.2;
     const moveDistance = 10;
+    let isMobile = false;
 
-    // Level configurations
+    // Level configurations (same as before)
     const levels = [
       { // Level 1 - Basic Training
         name: "LASER TRAINING",
@@ -769,6 +894,9 @@
 
     // Initialize the game
     function initGame() {
+      // Check if mobile device
+      isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
       gameStartTime = Date.now();
       levelStartTime = Date.now();
       totalDeaths = 0;
@@ -780,6 +908,7 @@
       
       updateHUD();
       initializeLevel(currentLevel);
+      setupMobileControls();
       gameLoop();
       
       if (musicOn) {
@@ -788,6 +917,29 @@
       }
       
       gameContainer.focus();
+    }
+
+    // Setup mobile controls
+    function setupMobileControls() {
+      if (!isMobile) return;
+      
+      // Movement buttons
+      upBtn.addEventListener('touchstart', () => targetY = Math.max(0, targetY - moveDistance));
+      downBtn.addEventListener('touchstart', () => targetY = Math.min(560, targetY + moveDistance));
+      leftBtn.addEventListener('touchstart', () => targetX = Math.max(0, targetX - moveDistance));
+      rightBtn.addEventListener('touchstart', () => targetX = Math.min(760, targetX + moveDistance));
+      
+      // Pause button
+      pauseBtn.addEventListener('touchstart', togglePause);
+      
+      // Mobile resume button
+      mobileResumeBtn.addEventListener('click', togglePause);
+      
+      // Prevent context menu on long press
+      document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        return false;
+      });
     }
 
     // Initialize a level
@@ -1241,7 +1393,7 @@
 
     function goToMenu() {
       // Save game state if needed
-      window.location.href = "menu.html";
+      window.location.href = "menu2.html";
     }
 
     // Event listeners
