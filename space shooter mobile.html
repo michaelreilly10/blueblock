@@ -214,6 +214,9 @@
     <audio id="explosionSound" src="bomb.wav"></audio>
 
     <script>
+        // Debugging flag
+        const DEBUG = true;
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreDisplay = document.getElementById("score");
@@ -243,10 +246,7 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // Reposition player if needed
-            if (player.x > canvas.width - player.size) {
-                player.x = canvas.width - player.size;
-            }
+            if (DEBUG) console.log(`Canvas resized to ${canvas.width}x${canvas.height}`);
         }
         
         window.addEventListener('resize', resizeCanvas);
@@ -256,9 +256,9 @@
         const player = { 
             x: canvas.width / 2, 
             y: canvas.height - 50, 
-            size: 30, // Slightly larger for mobile
+            size: 30,
             speed: 0,
-            maxSpeed: 10, // Increased for better mobile response
+            maxSpeed: 10,
             acceleration: 0.3,
             deceleration: 0.15,
             hitboxRadius: 15,
@@ -276,6 +276,8 @@
         let isPaused = false;
         let lastShotTime = 0;
         const shotCooldown = 300;
+        let lastObstacleTime = 0;
+        const obstacleInterval = 1000;
         
         // Touch control variables
         let leftPressed = false;
@@ -284,7 +286,30 @@
 
         // Starry background
         let stars = [];
-        const numStars = 150; // Reduced for mobile performance
+        const numStars = 150;
+
+        function initGame() {
+            if (DEBUG) console.log("Initializing game...");
+            
+            // Reset game state
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 50;
+            player.speed = 0;
+            obstacles = [];
+            projectiles = [];
+            explosions = [];
+            score = 0;
+            difficultyMultiplier = 1;
+            gameRunning = true;
+            lastObstacleTime = Date.now();
+            scoreDisplay.textContent = "Score: 0";
+            
+            // Initialize stars
+            stars = [];
+            createStars();
+            
+            if (DEBUG) console.log("Game initialized");
+        }
 
         function createStars() {
             for (let i = 0; i < numStars; i++) {
@@ -296,6 +321,7 @@
                     speed: Math.random() * 0.5
                 });
             }
+            if (DEBUG) console.log(`Created ${stars.length} stars`);
         }
 
         function drawStars() {
@@ -312,14 +338,12 @@
             });
         }
 
-        createStars();
-
-        // Projectile class with proper hitbox
+        // Projectile class
         class Projectile {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.size = 8; // Larger for visibility on mobile
+                this.size = 8;
                 this.speed = 12;
                 this.hitboxRadius = 4;
             }
@@ -340,11 +364,11 @@
                 this.x = x;
                 this.y = y;
                 this.particles = [];
-                for (let i = 0; i < 15; i++) { // Reduced particles for mobile
+                for (let i = 0; i < 15; i++) {
                     this.particles.push({
                         x: this.x,
                         y: this.y,
-                        size: Math.random() * 4 + 1, // Slightly larger
+                        size: Math.random() * 4 + 1,
                         speedX: (Math.random() - 0.5) * 5,
                         speedY: (Math.random() - 0.5) * 5,
                         opacity: 1
@@ -355,7 +379,7 @@
                 this.particles.forEach(particle => {
                     particle.x += particle.speedX;
                     particle.y += particle.speedY;
-                    particle.opacity -= 0.03; // Faster fade for performance
+                    particle.opacity -= 0.03;
                 });
             }
             draw() {
@@ -370,7 +394,7 @@
 
         let explosions = [];
 
-        // Meteor class with proper hitbox
+        // Meteor class
         class Meteor {
             constructor(x, y, size, speed) {
                 this.x = x;
@@ -390,7 +414,7 @@
             }
         }
 
-        // Spinning Star class with proper hitbox
+        // Spinning Star class
         class SpinningStar {
             constructor(x, y, size, speed) {
                 this.x = x;
@@ -428,7 +452,7 @@
             }
         }
 
-        // Asteroid class with proper hitbox and health
+        // Asteroid class
         class Asteroid {
             constructor(x, y, size, speed, health = 3) {
                 this.x = x;
@@ -443,13 +467,11 @@
                 this.y += this.speed * difficultyMultiplier;
             }
             draw() {
-                // Draw asteroid
                 ctx.fillStyle = "brown";
                 ctx.beginPath();
                 ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw health bar
                 const healthWidth = this.size * (this.health / this.maxHealth);
                 ctx.fillStyle = "red";
                 ctx.fillRect(this.x, this.y - 10, this.size, 5);
@@ -473,7 +495,7 @@
             }
         }
 
-        // Comet class with proper hitbox and tracking
+        // Comet class
         class Comet {
             constructor(x, y, size, speed, playerX, playerY) {
                 this.x = x;
@@ -491,10 +513,10 @@
                 this.y += Math.sin(this.angle) * this.speed * difficultyMultiplier;
 
                 this.tail.push({ x: this.x, y: this.y, opacity: 1 });
-                if (this.tail.length > 15) { // Shorter tail for performance
+                if (this.tail.length > 15) {
                     this.tail.shift();
                 }
-                this.tail.forEach(particle => particle.opacity -= 0.07); // Faster fade
+                this.tail.forEach(particle => particle.opacity -= 0.07);
             }
             draw() {
                 ctx.save();
@@ -531,7 +553,7 @@
         pauseButton.addEventListener("click", togglePause);
         resumeButton.addEventListener("click", togglePause);
         menuFromPauseButton.addEventListener("click", () => {
-            window.location.href = "menu2.html";
+            window.location.href = "menu.html";
         });
 
         // Touch controls
@@ -563,7 +585,7 @@
         // Touch movement for the whole screen
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (e.touches.length === 1) { // Only for single touch
+            if (e.touches.length === 1) {
                 touchId = e.touches[0].identifier;
                 handleTouchMove(e.touches[0]);
             }
@@ -596,7 +618,7 @@
 
         function handleTouchMove(touch) {
             const touchX = touch.clientX;
-            const threshold = 50; // Dead zone in center
+            const threshold = 50;
             
             if (touchX < canvas.width / 2 - threshold) {
                 player.speed = -player.maxSpeed;
@@ -613,10 +635,11 @@
                 projectiles.push(new Projectile(player.x + player.size / 2, player.y));
                 shootSound.play();
                 lastShotTime = now;
+                if (DEBUG) console.log("Projectile fired");
             }
         }
 
-        // Keyboard controls (for testing on desktop)
+        // Keyboard controls
         window.addEventListener("keydown", (e) => {
             if (e.key === " ") {
                 shootProjectile();
@@ -628,27 +651,67 @@
         });
         window.addEventListener("keyup", (e) => keys[e.key] = false);
 
-        // Precise collision detection
+        // Collision detection
         function checkCollision(a, b) {
-            // Get center points
             const aCenterX = a.x + (a.size ? a.size/2 : a.hitboxRadius);
             const aCenterY = a.y + (a.size ? a.size/2 : a.hitboxRadius);
             const bCenterX = b.x + (b.size ? b.size/2 : b.hitboxRadius);
             const bCenterY = b.y + (b.size ? b.size/2 : b.hitboxRadius);
             
-            // Calculate distance
             const dx = aCenterX - bCenterX;
             const dy = aCenterY - bCenterY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Check collision
             return distance < (a.hitboxRadius || a.size/2) + (b.hitboxRadius || b.size/2);
         }
 
-        function update() {
-            if (isPaused) return;
+        function spawnObstacle() {
+            let size = 40 + Math.random() * 30;
+            let speed = 2 + Math.random() * 3;
+            let type = Math.random();
+            let newObstacle;
+            
+            if (type < 0.25) {
+                newObstacle = new Asteroid(
+                    Math.random() * (canvas.width - size), 
+                    0, 
+                    size * 1.5, 
+                    speed * 0.5,
+                    3
+                );
+            } else if (type < 0.5) {
+                newObstacle = new Meteor(
+                    Math.random() * (canvas.width - size), 
+                    0, 
+                    size, 
+                    speed
+                );
+            } else if (type < 0.75) {
+                newObstacle = new SpinningStar(
+                    Math.random() * (canvas.width - size), 
+                    0, 
+                    size, 
+                    speed
+                );
+            } else {
+                newObstacle = new Comet(
+                    Math.random() * (canvas.width - size), 
+                    0, 
+                    size, 
+                    speed, 
+                    player.x + player.size/2, 
+                    player.y + player.size/2
+                );
+            }
+            
+            obstacles.push(newObstacle);
+            if (DEBUG) console.log(`Obstacle spawned (${newObstacle.constructor.name})`);
+        }
 
-            // Player movement - handle both touch buttons and keyboard
+        function update() {
+            if (isPaused || !gameRunning) return;
+
+            // Player movement
             if (leftPressed || keys["ArrowLeft"] || keys["a"] || keys["A"]) {
                 player.speed = Math.max(player.speed - player.acceleration, -player.maxSpeed);
             } else if (rightPressed || keys["ArrowRight"] || keys["d"] || keys["D"]) {
@@ -663,6 +726,7 @@
 
             player.x += player.speed;
 
+            // Boundary checking
             if (player.x < 0) {
                 player.x = 0;
                 player.speed = 0;
@@ -671,93 +735,76 @@
                 player.speed = 0;
             }
 
-            // Update projectiles
-            projectiles.forEach((projectile, pIndex) => {
-                projectile.update();
+            // Spawn obstacles
+            const currentTime = Date.now();
+            if (currentTime - lastObstacleTime > obstacleInterval / difficultyMultiplier) {
+                spawnObstacle();
+                lastObstacleTime = currentTime;
+            }
 
-                if (projectile.y < 0) {
-                    projectiles.splice(pIndex, 1);
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                projectiles[i].update();
+
+                if (projectiles[i].y < 0) {
+                    projectiles.splice(i, 1);
+                    continue;
                 }
 
-                obstacles.forEach((obs, oIndex) => {
-                    if (checkCollision(projectile, obs)) {
-                        if (obs instanceof Asteroid) {
-                            const newAsteroids = obs.hit();
-                            projectiles.splice(pIndex, 1);
+                // Check collisions with obstacles
+                for (let j = obstacles.length - 1; j >= 0; j--) {
+                    if (checkCollision(projectiles[i], obstacles[j])) {
+                        if (obstacles[j] instanceof Asteroid) {
+                            const newAsteroids = obstacles[j].hit();
+                            projectiles.splice(i, 1);
                             
                             if (newAsteroids) {
-                                obstacles.splice(oIndex, 1, ...newAsteroids);
+                                obstacles.splice(j, 1, ...newAsteroids);
                             } else {
-                                obstacles.splice(oIndex, 1);
-                                explosions.push(new Explosion(obs.x, obs.y));
+                                explosions.push(new Explosion(obstacles[j].x, obstacles[j].y));
+                                obstacles.splice(j, 1);
                                 score += 20;
                                 explosionSound.play();
                             }
                         } else {
-                            explosions.push(new Explosion(obs.x, obs.y));
-                            obstacles.splice(oIndex, 1);
-                            projectiles.splice(pIndex, 1);
+                            explosions.push(new Explosion(obstacles[j].x, obstacles[j].y));
+                            obstacles.splice(j, 1);
+                            projectiles.splice(i, 1);
                             score += 10;
                             explosionSound.play();
                         }
+                        break;
                     }
-                });
-            });
-
-            explosions.forEach((explosion, index) => {
-                explosion.update();
-                if (explosion.particles[0].opacity <= 0) {
-                    explosions.splice(index, 1);
-                }
-            });
-
-            // Spawn obstacles
-            if (Math.random() < 0.02 * difficultyMultiplier) {
-                let size = 40 + Math.random() * 30;
-                let speed = 2 + Math.random() * 3;
-                let type = Math.random();
-                
-                if (type < 0.25) {
-                    // Asteroid (big and slow)
-                    obstacles.push(new Asteroid(
-                        Math.random() * (canvas.width - size), 
-                        0, 
-                        size * 1.5, 
-                        speed * 0.5,
-                        3 // Health
-                    ));
-                } else if (type < 0.5) {
-                    obstacles.push(new Meteor(Math.random() * (canvas.width - size), 0, size, speed));
-                } else if (type < 0.75) {
-                    obstacles.push(new SpinningStar(Math.random() * (canvas.width - size), 0, size, speed));
-                } else {
-                    // Comet tracks player
-                    obstacles.push(new Comet(
-                        Math.random() * (canvas.width - size), 
-                        0, 
-                        size, 
-                        speed, 
-                        player.x + player.size/2, 
-                        player.y + player.size/2
-                    ));
                 }
             }
 
-            obstacles.forEach((obs, index) => {
-                obs.update();
+            // Update explosions
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                explosions[i].update();
+                if (explosions[i].particles[0].opacity <= 0) {
+                    explosions.splice(i, 1);
+                }
+            }
 
-                if (obs.y > canvas.height || obs.x < -obs.size || obs.x > canvas.width + obs.size) {
-                    obstacles.splice(index, 1);
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+
+                if (obstacles[i].y > canvas.height || 
+                    obstacles[i].x < -obstacles[i].size || 
+                    obstacles[i].x > canvas.width + obstacles[i].size) {
+                    obstacles.splice(i, 1);
                     score += 1;
                     scoreDisplay.textContent = "Score: " + score;
                     difficultyMultiplier += speedIncreaseRate;
+                    continue;
                 }
 
-                if (checkCollision(obs, player)) {
+                if (checkCollision(obstacles[i], player)) {
                     collisionSound.play();
                     gameRunning = false;
                 }
-            });
+            }
         }
 
         function draw() {
@@ -812,9 +859,11 @@
         });
 
         menuButton.addEventListener("click", () => {
-            window.location.href = "menu2.html";
+            window.location.href = "menu.html";
         });
 
+        // Initialize and start the game
+        initGame();
         gameLoop();
     </script>
 </body>
