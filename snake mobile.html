@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Neon Snake</title>
     <style>
         body {
@@ -16,13 +16,17 @@
             color: #e0e0e0;
             font-family: 'Arial', sans-serif;
             overflow: hidden;
+            touch-action: none;
         }
         
         #game-container {
             position: relative;
+            width: 100%;
+            max-width: 400px;
         }
         
         #game-canvas {
+            width: 100%;
             border: 2px solid #1565c0;
             box-shadow: 0 0 20px #2196f3;
         }
@@ -53,6 +57,8 @@
             border-radius: 10px;
             text-align: center;
             display: none;
+            width: 80%;
+            max-width: 300px;
         }
         
         #restart-btn {
@@ -100,13 +106,36 @@
             font-size: 14px;
             color: #a0a0a0;
         }
+        
+        .swipe-instructions {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #40c4ff;
+            font-size: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .swipe-instructions {
+                display: block;
+            }
+            
+            #game-canvas {
+                height: 80vw;
+                max-height: 400px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="score-display">Score: 0</div>
         <div id="multiplier-display">Multiplier: 1x</div>
-        <canvas id="game-canvas" width="400" height="400"></canvas>
+        <canvas id="game-canvas"></canvas>
+        <div class="swipe-instructions">Swipe to move</div>
         <div id="game-over">
             <h2>Game Over!</h2>
             <p id="final-score">Your score: 0</p>
@@ -116,6 +145,7 @@
             </div>
             <div class="instructions">
                 Use arrow keys or WASD to move<br>
+                Or swipe in the direction you want to go<br>
                 Collect the glowing food to grow<br>
                 Avoid obstacles and yourself!
             </div>
@@ -133,8 +163,18 @@
             const restartBtn = document.getElementById('restart-btn');
             const menuBtn = document.getElementById('menu-btn');
             
+            // Set canvas size
+            function resizeCanvas() {
+                const size = Math.min(window.innerWidth - 40, 400);
+                canvas.width = size;
+                canvas.height = size;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
             const gridSize = 20;
-            const tileCount = canvas.width / gridSize;
+            let tileCount = canvas.width / gridSize;
             
             let snake = [{x: 10, y: 10}];
             let velocity = {x: 0, y: 0};
@@ -146,6 +186,12 @@
             let gameSpeed = 150;
             let gameRunning = true;
             let gameLoop;
+            
+            // Touch/swipe variables
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
             
             // Generate a random position
             function randomPosition() {
@@ -385,6 +431,7 @@
                 scoreDisplay.textContent = `Score: ${score}`;
                 multiplierDisplay.textContent = `Multiplier: ${multiplier}x`;
                 
+                clearInterval(gameLoop);
                 gameLoop = setInterval(() => {
                     if (gameRunning) {
                         update();
@@ -392,6 +439,43 @@
                     }
                 }, gameSpeed);
             }
+            
+            // Handle swipe direction
+            function handleSwipe() {
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                
+                // Determine primary direction
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal swipe
+                    if (dx > 0 && velocity.x === 0) {
+                        velocity = {x: 1, y: 0}; // Right
+                    } else if (dx < 0 && velocity.x === 0) {
+                        velocity = {x: -1, y: 0}; // Left
+                    }
+                } else {
+                    // Vertical swipe
+                    if (dy > 0 && velocity.y === 0) {
+                        velocity = {x: 0, y: 1}; // Down
+                    } else if (dy < 0 && velocity.y === 0) {
+                        velocity = {x: 0, y: -1}; // Up
+                    }
+                }
+            }
+            
+            // Touch event handlers
+            canvas.addEventListener('touchstart', e => {
+                e.preventDefault();
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, {passive: false});
+            
+            canvas.addEventListener('touchend', e => {
+                e.preventDefault();
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            }, {passive: false});
             
             // Keyboard controls
             document.addEventListener('keydown', e => {
@@ -426,7 +510,7 @@
             
             // Menu button
             menuBtn.addEventListener('click', () => {
-                window.location.href = 'menu.html';
+                window.location.href = 'menu2.html';
             });
             
             // Start the game
