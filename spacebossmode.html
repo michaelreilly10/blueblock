@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Battler</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; background: black; }
+        #score, #level, #bossHealth, #pauseButton {
+            position: absolute;
+            top: 10px;
+            color: #00aaff;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        #score { left: 10px; }
+        #level { left: 50%; transform: translateX(-50%); }
+        #bossHealth { right: 10px; color: #ff4444; }
+        #pauseButton { 
+            left: 10px; 
+            top: 40px;
+            cursor: pointer;
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+        #pauseButton:hover {
+            background: rgba(0, 170, 255, 0.5);
+        }
+
+        #gameOver, #levelComplete, #pauseMenu, #winScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00aaff;
+        }
+
+        #gameOver h1, #levelComplete h1, #pauseMenu h1, #winScreen h1 {
+            font-size: 60px;
+            margin: 0;
+            animation: pulse 1.5s infinite;
+            color: #ff4444;
+        }
+
+        #winScreen h1 {
+            color: #4CAF50;
+            text-shadow: 0 0 10px #4CAF50;
+        }
+
+        #pauseMenu h1 {
+            color: #00aaff;
+            animation: none;
+        }
+
+        #gameOver p, #levelComplete p, #pauseMenu p, #winScreen p {
+            font-size: 24px;
+            margin: 10px 0 20px;
+            color: white;
+        }
+
+        .menu-button {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin: 10px;
+            background: #00aaff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            min-width: 150px;
+        }
+
+        .menu-button:hover {
+            background: #ffaa00;
+            transform: scale(1.05);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes victory {
+            0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+            25% { transform: translate(-50%, -50%) rotate(5deg) scale(1.05); }
+            50% { transform: translate(-50%, -50%) rotate(-5deg) scale(1.1); }
+            75% { transform: translate(-50%, -50%) rotate(5deg) scale(1.05); }
+            100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+        }
+
+        .victory-animation {
+            animation: victory 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="pauseButton">Pause</div>
+    <div id="level">Level: 1</div>
+    <div id="bossHealth">Boss Health: 100</div>
+    
+    <div id="gameOver">
+        <h1>Game Over</h1>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <button class="menu-button" id="restart">Restart</button>
+        <button class="menu-button" id="menuFromGameOver">Menu</button>
+    </div>
+    
+    <div id="levelComplete">
+        <h1>Level Complete!</h1>
+        <p>Get ready for the next level...</p>
+    </div>
+    
+    <div id="winScreen">
+        <h1>You Win!</h1>
+        <p>Final Score: <span id="winScore">0</span></p>
+        <button class="menu-button" id="restartFromWin">Play Again</button>
+        <button class="menu-button" id="menuFromWin">Menu</button>
+    </div>
+    
+    <div id="pauseMenu">
+        <h1>Paused</h1>
+        <p>Game is paused</p>
+        <button class="menu-button" id="resume">Resume</button>
+        <button class="menu-button" id="menuFromPause">Menu</button>
+        <button class="menu-button" id="restartFromPause">Restart</button>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+
+    <audio id="shootSound" src="shoot.wav"></audio>
+    <audio id="explosionSound" src="explosion.wav"></audio>
+    <audio id="bossHitSound" src="boss_hit.wav"></audio>
+    <audio id="gameOverSound" src="game_over.wav"></audio>
+    <audio id="levelCompleteSound" src="level_complete.wav"></audio>
+    <audio id="victorySound" src="victory.wav"></audio>
+    <audio id="pauseSound" src="pause.wav"></audio>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+        const levelDisplay = document.getElementById("level");
+        const bossHealthDisplay = document.getElementById("bossHealth");
+        const gameOverScreen = document.getElementById("gameOver");
+        const levelCompleteScreen = document.getElementById("levelComplete");
+        const winScreen = document.getElementById("winScreen");
+        const pauseMenu = document.getElementById("pauseMenu");
+        const finalScoreDisplay = document.getElementById("finalScore");
+        const winScoreDisplay = document.getElementById("winScore");
+        const pauseButton = document.getElementById("pauseButton");
+        const restartButton = document.getElementById("restart");
+        const menuFromGameOver = document.getElementById("menuFromGameOver");
+        const restartFromWin = document.getElementById("restartFromWin");
+        const menuFromWin = document.getElementById("menuFromWin");
+        const resumeButton = document.getElementById("resume");
+        const menuFromPause = document.getElementById("menuFromPause");
+        const restartFromPause = document.getElementById("restartFromPause");
+    
+        // Audio elements
+        const shootSound = document.getElementById("shootSound");
+        const explosionSound = document.getElementById("explosionSound");
+        const bossHitSound = document.getElementById("bossHitSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const levelCompleteSound = document.getElementById("levelCompleteSound");
+        const victorySound = document.getElementById("victorySound");
+        const pauseSound = document.getElementById("pauseSound");
+    
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    
+        // Game objects
+        let player = { 
+            x: canvas.width / 2, 
+            y: canvas.height - 50, 
+            size: 20, 
+            speed: 0,
+            maxSpeed: 7,
+            acceleration: 0.2,
+            deceleration: 0.1,
+            projectiles: []
+        };
+        let bosses = [];
+        let bossProjectiles = [];
+        let currentLevel = 1;
+        let score = 0;
+        let gameRunning = true;
+        let gamePaused = false;
+        let levelTransition = false;
+        let transitionTimer = 0;
+        const transitionDuration = 2000;
+        let keys = {};
+        
+        // Shooting cooldown
+        let canShoot = true;
+        const shootCooldown = 200; // milliseconds between shots
+        let lastShotTime = 0;
+        
+        // Starfield background
+        const stars = [];
+        const starCount = 200;
+        
+        // Initialize stars
+        for (let i = 0; i < starCount; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 1.5 + 0.5,
+                speed: Math.random() * 0.2 + 0.05,
+                twinkleSpeed: Math.random() * 0.05 + 0.01,
+                opacity: Math.random(),
+                direction: Math.random() > 0.5 ? 1 : -1
+            });
+        }
+
+        // Explosion effects
+        const explosions = [];
+        
+        class Explosion {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.particles = [];
+                this.duration = 30; // frames
+                this.frame = 0;
+                
+                // Create particles
+                const particleCount = size * 2;
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: 0,
+                        y: 0,
+                        size: Math.random() * 3 + 1,
+                        speed: Math.random() * 5 + 2,
+                        angle: Math.random() * Math.PI * 2,
+                        color: `hsl(${Math.random() * 60 + 10}, 100%, 50%)` // Orange/yellow colors
+                    });
+                }
+            }
+            
+            update() {
+                this.frame++;
+                return this.frame < this.duration;
+            }
+            
+            draw() {
+                const progress = this.frame / this.duration;
+                const currentSize = this.size * (1 - progress * 0.7); // Shrink slightly
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Draw particles
+                this.particles.forEach(particle => {
+                    const distance = particle.speed * this.frame;
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = 1 - progress; // Fade out
+                    ctx.beginPath();
+                    ctx.arc(
+                        Math.cos(particle.angle) * distance,
+                        Math.sin(particle.angle) * distance,
+                        particle.size,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                });
+                
+                // Core explosion
+                ctx.fillStyle = `rgba(255, 200, 0, ${1 - progress})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, currentSize * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Outer glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, currentSize);
+                gradient.addColorStop(0, `rgba(255, 100, 0, ${0.7 * (1 - progress)})`);
+                gradient.addColorStop(1, "rgba(255, 100, 0, 0)");
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, currentSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // Helper function to draw health bars
+        function drawHealthBar(x, y, width, height, currentHealth, maxHealth) {
+            // Background
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(x, y, width, height);
+            
+            // Health level
+            const healthWidth = (currentHealth / maxHealth) * width;
+            ctx.fillStyle = currentHealth > maxHealth * 0.6 ? "#4CAF50" : 
+                           currentHealth > maxHealth * 0.3 ? "#FFC107" : "#F44336";
+            ctx.fillRect(x, y, healthWidth, height);
+            
+            // Border
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, width, height);
+        }
+        
+        function drawStars() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            stars.forEach(star => {
+                // Update star position (parallax effect)
+                if (!gamePaused) {
+                    star.y += star.speed;
+                }
+                
+                // Reset star if it goes off screen
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+                
+                // Twinkle effect
+                star.opacity += star.twinkleSpeed * star.direction;
+                if (star.opacity > 1 || star.opacity < 0.3) {
+                    star.direction *= -1;
+                }
+                
+                // Draw star
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function togglePause() {
+            gamePaused = !gamePaused;
+            if (gamePaused) {
+                pauseMenu.style.display = "block";
+                pauseSound.play();
+            } else {
+                pauseMenu.style.display = "none";
+            }
+        }
+
+        function goToMenu() {
+            // In a real game, this would navigate to a main menu
+            window.location.href = "menu.html";
+        }
+
+        // Event listeners for pause and menu buttons
+        pauseButton.addEventListener("click", togglePause);
+        resumeButton.addEventListener("click", togglePause);
+        menuFromPause.addEventListener("click", goToMenu);
+        menuFromGameOver.addEventListener("click", goToMenu);
+        menuFromWin.addEventListener("click", goToMenu);
+        restartFromPause.addEventListener("click", () => {
+            location.reload();
+        });
+        restartFromWin.addEventListener("click", () => {
+            location.reload();
+        });
+
+        // Keyboard controls with tap-to-shoot
+        window.addEventListener("keydown", (e) => {
+            if (gamePaused) return;
+            
+            if (e.key === " " && canShoot) {
+                const currentTime = Date.now();
+                if (currentTime - lastShotTime >= shootCooldown) {
+                    player.projectiles.push(new Projectile(player.x + player.size / 2, player.y));
+                    shootSound.play();
+                    canShoot = false;
+                    lastShotTime = currentTime;
+                    
+                    setTimeout(() => {
+                        canShoot = true;
+                    }, shootCooldown);
+                }
+            } else {
+                keys[e.key] = true;
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === " ") {
+                // Spacebar released - no action needed due to cooldown system
+            } else {
+                keys[e.key] = false;
+            }
+        });
+
+        // Also allow pausing with Escape key
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                togglePause();
+            }
+        });
+    
+        class Boss {
+            constructor(level) {
+                this.level = level;
+                this.maxHealth = level === 5 ? 750 : (level === 4 ? 400 : (level === 3 ? 300 : (level === 2 ? 150 : 100)));
+                this.health = this.maxHealth;
+                this.size = 100 + (level - 1) * 20;
+                this.x = canvas.width / 2 - this.size / 2;
+                this.y = 50;
+                this.speed = 2 + (level - 1) * 0.5;
+                this.attackPattern = level % 5;
+                this.shootCooldown = level === 3 ? 70 : (level === 5 ? 30 : (level === 4 ? 60 : (level === 2 ? 80 : 100)));
+                this.shootTimer = 0;
+                this.directionY = 1;
+                this.directionX = 1;
+                this.moveTimer = 0;
+                this.moveCooldown = 60;
+                this.oscillationFactor = 0;
+                this.bigShotCooldown = 180; // For Level 3 big shots
+                this.bigShotTimer = 0;
+                
+                // Level 1 (formerly level 2) properties
+                if (level === 1) {
+                    this.directionX = Math.random() < 0.5 ? 1 : -1;
+                    this.directionY = Math.random() < 0.5 ? 1 : -1;
+                }
+                
+                // Level 2 specific properties (new unique boss)
+                if (level === 2) {
+                    this.phase = 0; // 0 = moving, 1 = splitting
+                    this.phaseTimer = 0;
+                    this.clones = [];
+                    this.splitCooldown = 180; // 3 seconds
+                    this.splitTimer = 0;
+                }
+                
+                // Level 3 specific properties
+                if (level === 3) {
+                    this.phase = 0; // 0 = orbiting, 1 = charging big shot
+                    this.phaseTimer = 0;
+                    this.minions = [];
+                    this.chargingBigShot = false;
+                    this.chargeTimer = 0;
+                }
+                // Level 5 specific properties
+                if (level === 5) {
+                    this.phase = 0;
+                    this.phaseTimer = 0;
+                    this.minions = [];
+                    this.laserCharge = 0;
+                    this.laserActive = false;
+                    this.laserWidth = 0;
+                }
+            }
+    
+            update() {
+                if (gamePaused) return;
+                
+                if (this.level === 1) {
+                    // Former level 2 behavior (now level 1)
+                    this.moveTimer++;
+                    if (this.moveTimer >= this.moveCooldown) {
+                        this.moveTimer = 0;
+                        this.directionX = Math.random() < 0.5 ? 1 : -1;
+                        this.directionY = Math.random() < 0.5 ? 1 : -1;
+                    }
+    
+                    this.x += this.speed * this.directionX;
+                    this.y += this.speed * this.directionY;
+    
+                    if (this.x + this.size > canvas.width) {
+                        this.x = canvas.width - this.size;
+                        this.directionX = -1;
+                    } else if (this.x < 0) {
+                        this.x = 0;
+                        this.directionX = 1;
+                    }
+    
+                    if (this.y + this.size > canvas.height) {
+                        this.y = canvas.height - this.size;
+                        this.directionY = -1;
+                    } else if (this.y < 0) {
+                        this.y = 0;
+                        this.directionY = 1;
+                    }
+                } else if (this.level === 2) {
+                    // New unique level 2 boss - The Splitter
+                    this.phaseTimer++;
+                    this.splitTimer++;
+                    
+                    // Phase 0: Moving around
+                    if (this.phase === 0) {
+                        this.x += Math.sin(this.phaseTimer * 0.05) * 2;
+                        this.y += Math.cos(this.phaseTimer * 0.03) * 1.5;
+                        
+                        // Keep within bounds
+                        this.x = Math.max(0, Math.min(canvas.width - this.size, this.x));
+                        this.y = Math.max(50, Math.min(canvas.height/2, this.y));
+                        
+                        // Split into clones periodically
+                        if (this.splitTimer >= this.splitCooldown) {
+                            this.splitTimer = 0;
+                            this.phase = 1;
+                            this.createClones();
+                        }
+                    }
+                    // Phase 1: After splitting
+                    else if (this.phase === 1) {
+                        // Main boss becomes invulnerable and transparent
+                        if (this.phaseTimer > 120) { // 2 seconds
+                            this.phase = 0;
+                            this.phaseTimer = 0;
+                        }
+                    }
+                    
+                    // Update clones
+                    this.clones.forEach((clone, index) => {
+                        clone.update();
+                        if (clone.health <= 0) {
+                            this.clones.splice(index, 1);
+                            score += 20;
+                            explosions.push(new Explosion(
+                                clone.x + clone.size/2,
+                                clone.y + clone.size/2,
+                                clone.size
+                            ));
+                            explosionSound.play();
+                        }
+                    });
+                } else if (this.level === 3) {
+                    // Modified Level 3 Boss: No laser phase, now with big projectiles
+                    this.phaseTimer++;
+                    this.bigShotTimer++;
+                    
+                    // Orbiting movement
+                    this.oscillationFactor += 0.04;
+                    this.x = canvas.width/2 + Math.cos(this.oscillationFactor) * 150;
+                    this.y = canvas.height/3 + Math.sin(this.oscillationFactor) * 100;
+                    
+                    // Summon minions every 3 seconds
+                    if (this.phaseTimer % 180 === 0) {
+                        this.summonMinion();
+                    }
+                    
+                    // Fire big projectile every 3 seconds
+                    if (this.bigShotTimer >= this.bigShotCooldown) {
+                        this.bigShotTimer = 0;
+                        this.fireBigProjectile();
+                    }
+                    
+                    // Update minions
+                    this.minions.forEach((minion, index) => {
+                        minion.update();
+                        if (minion.health <= 0) {
+                            this.minions.splice(index, 1);
+                            score += 30;
+                            explosions.push(new Explosion(
+                                minion.x,
+                                minion.y,
+                                minion.size * 1.5
+                            ));
+                            explosionSound.play();
+                        }
+                    });
+                } else if (this.level === 4) {
+                    // Level 4 Boss: Circular movement pattern
+                    this.oscillationFactor += 0.03;
+                    this.x = canvas.width/2 + Math.cos(this.oscillationFactor) * (canvas.width/3 - this.size/2);
+                    this.y = canvas.height/3 + Math.sin(this.oscillationFactor) * (canvas.height/4);
+                    
+                    // Occasionally change direction
+                    this.moveTimer++;
+                    if (this.moveTimer >= this.moveCooldown) {
+                        this.moveTimer = 0;
+                        this.oscillationFactor = Math.random() * Math.PI * 2;
+                    }
+                } else if (this.level === 5) {
+                    // Level 5 Boss: Ultimate Final Boss with multiple phases
+                    this.phaseTimer++;
+                    
+                    // Phase 0: Orbiting with minions
+                    if (this.phase === 0) {
+                        this.oscillationFactor += 0.02;
+                        this.x = canvas.width/2 + Math.cos(this.oscillationFactor) * 200;
+                        this.y = canvas.height/3 + Math.sin(this.oscillationFactor * 1.5) * 100;
+                        
+                        // Summon minions periodically
+                        if (this.phaseTimer % 120 === 0) {
+                            this.summonMinion();
+                        }
+                        
+                        if (this.phaseTimer > 240) { // 4 seconds
+                            this.phase = 1;
+                            this.phaseTimer = 0;
+                        }
+                    }
+                    // Phase 1: Summoning circle
+                    else if (this.phase === 1) {
+                        this.x = canvas.width/2 - this.size/2;
+                        this.y = canvas.height/4;
+                        
+                        // Create circle of projectiles
+                        if (this.phaseTimer % 30 === 0) {
+                            this.createCircleAttack();
+                        }
+                        
+                        if (this.phaseTimer > 180) { // 3 seconds
+                            this.phase = 2;
+                            this.phaseTimer = 0;
+                            this.laserCharge = 0;
+                        }
+                    }
+                    // Phase 2: Laser attack
+                    else if (this.phase === 2) {
+                        // Charge up laser
+                        if (!this.laserActive) {
+                            this.laserCharge++;
+                            if (this.laserCharge > 90) { // 1.5 second charge
+                                this.laserActive = true;
+                                this.laserWidth = 50;
+                            }
+                        } 
+                        // Fire laser
+                        else {
+                            this.laserWidth = Math.min(this.laserWidth + 2, 300);
+                            if (this.phaseTimer > 120) { // 2 seconds firing
+                                this.laserActive = false;
+                                this.phase = 0;
+                                this.phaseTimer = 0;
+                            }
+                        }
+                    }
+                    
+                    // Update minions
+                    this.minions.forEach((minion, index) => {
+                        minion.update();
+                        if (minion.health <= 0) {
+                            this.minions.splice(index, 1);
+                            score += 50;
+                            explosions.push(new Explosion(
+                                minion.x,
+                                minion.y,
+                                minion.size * 1.5
+                            ));
+                            explosionSound.play();
+                        }
+                    });
+                }
+    
+                this.shootTimer++;
+                if (this.shootTimer >= this.shootCooldown) {
+                    this.shootTimer = 0;
+                    if (this.level === 1) {
+                        // Simple projectile pattern for level 1
+                        bossProjectiles.push(new BossProjectile(
+                            this.x + this.size / 2, 
+                            this.y + this.size, 
+                            5, 5, Math.PI / 2
+                        ));
+                    } else if (this.level === 2) {
+                        // New level 2 boss attack pattern
+                        if (this.phase === 0) {
+                            // Main boss shoots in a spread pattern
+                            for (let i = 0; i < 3; i++) {
+                                const angle = Math.PI/2 + (i-1) * Math.PI/8;
+                                bossProjectiles.push(new BossProjectile(
+                                    this.x + this.size/2,
+                                    this.y + this.size,
+                                    5, 4, angle
+                                ));
+                            }
+                        } else if (this.phase === 1) {
+                            // Clones shoot in all directions
+                            this.clones.forEach(clone => {
+                                for (let i = 0; i < 4; i++) {
+                                    const angle = i * Math.PI/2 + Math.PI/4;
+                                    bossProjectiles.push(new BossProjectile(
+                                        clone.x + clone.size/2,
+                                        clone.y + clone.size/2,
+                                        4, 3, angle
+                                    ));
+                                }
+                            });
+                        }
+                    } else if (this.level === 3) {
+                        // Modified Level 3 attack pattern
+                        // Spiral projectiles
+                        for (let i = 0; i < 2; i++) {
+                            const angle = this.oscillationFactor * 3 + (i * Math.PI);
+                            const proj = new BossProjectile(
+                                this.x + this.size/2,
+                                this.y + this.size/2,
+                                6, 4, angle
+                            );
+                            proj.color = "#ff6600"; // Orange projectiles
+                            bossProjectiles.push(proj);
+                        }
+                    } else if (this.level === 4) {
+                        // Level 4 Boss: Light blue tracking projectiles in spiral pattern
+                        for (let i = 0; i < 3; i++) {
+                            const angle = this.oscillationFactor * 2 + (i * Math.PI * 2 / 3);
+                            const proj = new BossProjectile(
+                                this.x + this.size/2,
+                                this.y + this.size/2,
+                                6, 4, angle
+                            );
+                            proj.tracking = true;
+                            proj.color = "#66f2ff"; // Light blue
+                            bossProjectiles.push(proj);
+                        }
+                    } else if (this.level === 5) {
+                        // Level 5 Boss: Phase-based attacks
+                        if (this.phase === 0) {
+                            // Spiral pattern in orbiting phase
+                            for (let i = 0; i < 3; i++) {
+                                const angle = this.oscillationFactor * 2 + (i * Math.PI * 2 / 3);
+                                bossProjectiles.push(new BossProjectile(
+                                    this.x + this.size/2, 
+                                    this.y + this.size/2, 
+                                    5, 4, angle
+                                ));
+                            }
+                        } else if (this.phase === 1) {
+                            // Circle pattern in summoning phase
+                            for (let i = 0; i < 8; i++) {
+                                const angle = (i * Math.PI * 2) / 8;
+                                const proj = new BossProjectile(
+                                    this.x + this.size/2,
+                                    this.y + this.size/2,
+                                    6, 3, angle
+                                );
+                                proj.homing = true;
+                                bossProjectiles.push(proj);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            fireBigProjectile() {
+                if (this.level === 3) {
+                    // Create a large projectile aimed at player
+                    const angleToPlayer = Math.atan2(
+                        player.y - this.y, 
+                        player.x - this.x
+                    );
+                    const bigProj = new BossProjectile(
+                        this.x + this.size/2,
+                        this.y + this.size/2,
+                        20,  // Large size
+                        3,   // Slower speed
+                        angleToPlayer
+                    );
+                    bigProj.color = "#ff3300"; // Dark orange/red
+                    bossProjectiles.push(bigProj);
+                }
+            }
+    
+            createClones() {
+                if (this.level === 2) {
+                    // Create 2 smaller clones
+                    for (let i = 0; i < 2; i++) {
+                        const clone = {
+                            x: this.x + (i === 0 ? -50 : 50),
+                            y: this.y + 30,
+                            size: this.size * 0.7,
+                            maxHealth: 30,
+                            health: 30,
+                            speed: 2.5,
+                            angle: Math.random() * Math.PI * 2,
+                            update: function() {
+                                if (gamePaused) return;
+                                // Move in a circular pattern
+                                this.angle += 0.02;
+                                this.x += Math.cos(this.angle) * this.speed;
+                                this.y += Math.sin(this.angle) * this.speed;
+                                
+                                // Stay within bounds
+                                this.x = Math.max(0, Math.min(canvas.width - this.size, this.x));
+                                this.y = Math.max(50, Math.min(canvas.height/1.5, this.y));
+                            },
+                            draw: function() {
+                                ctx.fillStyle = "rgba(150, 255, 150, 0.7)";
+                                ctx.beginPath();
+                                ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                                ctx.fill();
+                                
+                                // Health bar for clones
+                                drawHealthBar(
+                                    this.x + this.size/2 - 30, 
+                                    this.y - 15, 
+                                    60, 
+                                    5, 
+                                    this.health, 
+                                    this.maxHealth
+                                );
+                            }
+                        };
+                        this.clones.push(clone);
+                    }
+                }
+            }
+    
+            summonMinion() {
+                if (this.level === 3 || this.level === 5) {
+                    const minion = {
+                        x: this.x + this.size/2,
+                        y: this.y + this.size,
+                        size: this.level === 3 ? 25 : 30,
+                        maxHealth: this.level === 3 ? 20 : 30,
+                        health: this.level === 3 ? 20 : 30,
+                        speed: this.level === 3 ? 1.5 : 2,
+                        angle: Math.random() * Math.PI * 2,
+                        update: function() {
+                            if (gamePaused) return;
+                            this.x += Math.cos(this.angle) * this.speed;
+                            this.y += Math.sin(this.angle) * this.speed;
+                            
+                            // Bounce off walls
+                            if (this.x < 0 || this.x > canvas.width) {
+                                this.angle = Math.PI - this.angle;
+                            }
+                            if (this.y < 50 || this.y > (this.level === 3 ? canvas.height/1.5 : canvas.height/2)) {
+                                this.angle = -this.angle;
+                            }
+                            
+                            // Shoot at player occasionally (Level 5 only)
+                            if (this.level === 5 && Math.random() < 0.01) {
+                                const angleToPlayer = Math.atan2(
+                                    player.y - this.y, 
+                                    player.x - this.x
+                                );
+                                bossProjectiles.push(new BossProjectile(
+                                    this.x, this.y, 4, 4, angleToPlayer
+                                ));
+                            }
+                        },
+                        draw: function() {
+                            ctx.fillStyle = this.level === 3 ? "#ff9966" : "green";
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                            ctx.fill();
+                            
+                            // Health bar for minions
+                            drawHealthBar(
+                                this.x - 20, 
+                                this.y - 15, 
+                                40, 
+                                4, 
+                                this.health, 
+                                this.maxHealth
+                            );
+                        },
+                        level: this.level // Store which boss level this minion belongs to
+                    };
+                    this.minions.push(minion);
+                }
+            }
+    
+            createCircleAttack() {
+                if (this.level === 5) {
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (i * Math.PI * 2) / 12;
+                        const proj = new BossProjectile(
+                            this.x + this.size/2,
+                            this.y + this.size/2,
+                            8, 3, angle
+                        );
+                        proj.homing = true;
+                        bossProjectiles.push(proj);
+                    }
+                }
+            }
+    
+            draw() {
+                if (this.level === 1) {
+                    // Level 1 boss (formerly level 2)
+                    ctx.fillStyle = "rgba(255, 100, 100, 0.8)";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Eyes
+                    ctx.fillStyle = "white";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/3, this.y + this.size/3, this.size/8, 0, Math.PI * 2);
+                    ctx.arc(this.x + this.size*2/3, this.y + this.size/3, this.size/8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Mouth
+                    ctx.strokeStyle = "white";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/4, 0.1 * Math.PI, 0.9 * Math.PI);
+                    ctx.stroke();
+                    
+                    // Health bar
+                    drawHealthBar(
+                        this.x + this.size/2 - 50, 
+                        this.y - 20, 
+                        100, 
+                        8, 
+                        this.health, 
+                        this.maxHealth
+                    );
+                } else if (this.level === 2) {
+                    // New level 2 boss - The Splitter
+                    if (this.phase === 0) {
+                        // Main boss - green
+                        ctx.fillStyle = "rgba(100, 255, 100, 0.8)";
+                        ctx.beginPath();
+                        ctx.arc(
+                            this.x + this.size/2, 
+                            this.y + this.size/2, 
+                            this.size/2, 
+                            0, 
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                        
+                        // Core
+                        ctx.fillStyle = "#00ff00";
+                        ctx.beginPath();
+                        ctx.arc(
+                            this.x + this.size/2, 
+                            this.y + this.size/2, 
+                            this.size/4, 
+                            0, 
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                        
+                        // Health bar
+                        drawHealthBar(
+                            this.x + this.size/2 - 50, 
+                            this.y - 20, 
+                            100, 
+                            8, 
+                            this.health, 
+                            this.maxHealth
+                        );
+                    } else {
+                        // When split, main boss becomes transparent
+                        ctx.fillStyle = "rgba(100, 255, 100, 0.3)";
+                        ctx.beginPath();
+                        ctx.arc(
+                            this.x + this.size/2, 
+                            this.y + this.size/2, 
+                            this.size/2, 
+                            0, 
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                    
+                    // Draw clones
+                    this.clones.forEach(clone => clone.draw());
+                } else if (this.level === 3) {
+                    // Level 3 boss visual
+                    ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Core
+                    ctx.fillStyle = "#ffff00";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Health bar
+                    drawHealthBar(
+                        this.x + this.size/2 - 50, 
+                        this.y - 20, 
+                        100, 
+                        8, 
+                        this.health, 
+                        this.maxHealth
+                    );
+                    
+                    // Draw minions
+                    this.minions.forEach(minion => minion.draw());
+                } else if (this.level === 4) {
+                    // Level 4 boss visual - circular
+                    ctx.fillStyle = "rgba(100, 100, 255, 0.8)";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Inner core
+                    ctx.fillStyle = "#66f2ff";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Health bar
+                    drawHealthBar(
+                        this.x + this.size/2 - 50, 
+                        this.y - 20, 
+                        100, 
+                        8, 
+                        this.health, 
+                        this.maxHealth
+                    );
+                } else if (this.level === 5) {
+                    // Draw boss
+                    ctx.fillStyle = "rgba(200, 0, 200, 0.8)";
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Phase indicator
+                    const colors = ["#00ffff", "#ffff00", "#ff0000"];
+                    ctx.fillStyle = colors[this.phase];
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Health bar
+                    drawHealthBar(
+                        this.x + this.size/2 - 75, 
+                        this.y - 25, 
+                        150, 
+                        10, 
+                        this.health, 
+                        this.maxHealth
+                    );
+                    
+                    // Draw laser if active
+                    if (this.laserActive) {
+                        ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+                        ctx.fillRect(
+                            this.x + this.size/2 - this.laserWidth/2, 
+                            this.y + this.size,
+                            this.laserWidth,
+                            canvas.height - this.y - this.size
+                        );
+                    }
+                    
+                    // Draw minions
+                    this.minions.forEach(minion => minion.draw());
+                }
+            }
+        }
+    
+        class BossProjectile {
+            constructor(x, y, size, speed, angle) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.speed = speed;
+                this.angle = angle;
+                this.tracking = false; // For Level 4 projectiles
+                this.trackingTimer = 0;
+                this.color = "orange"; // Default color
+                this.homing = false; // For Level 5 projectiles
+                this.homingTimer = 0;
+            }
+    
+            update() {
+                if (gamePaused) return;
+                
+                // Tracking behavior for Level 4 projectiles
+                if (this.tracking && this.trackingTimer < 90) { // Track for 1.5 seconds
+                    this.trackingTimer++;
+                    const targetAngle = Math.atan2(
+                        player.y - this.y,
+                        player.x - this.x
+                    );
+                    // Gradually adjust angle toward player
+                    this.angle = this.angle * 0.97 + targetAngle * 0.03;
+                }
+                
+                // Homing behavior for Level 5 projectiles
+                if (this.homing && this.homingTimer < 60) {
+                    this.homingTimer++;
+                    const targetAngle = Math.atan2(
+                        player.y - this.y,
+                        player.x - this.x
+                    );
+                    // Gradually adjust angle toward player
+                    this.angle = this.angle * 0.95 + targetAngle * 0.05;
+                }
+                
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+    
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    
+        // Initialize first boss
+        bosses.push(new Boss(currentLevel));
+    
+        class Projectile {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 5;
+                this.speed = 10;
+            }
+    
+            update() {
+                if (gamePaused) return;
+                this.y -= this.speed;
+            }
+    
+            draw() {
+                ctx.fillStyle = "yellow";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    
+        function updatePlayer() {
+            if (gamePaused) return;
+            
+            if (keys["ArrowLeft"]) {
+                player.speed = Math.max(player.speed - player.acceleration, -player.maxSpeed);
+            } else if (keys["ArrowRight"]) {
+                player.speed = Math.min(player.speed + player.acceleration, player.maxSpeed);
+            } else {
+                if (player.speed > 0) {
+                    player.speed = Math.max(player.speed - player.deceleration, 0);
+                } else if (player.speed < 0) {
+                    player.speed = Math.min(player.speed + player.deceleration, 0);
+                }
+            }
+    
+            player.x += player.speed;
+    
+            if (player.x < 0) {
+                player.x = 0;
+                player.speed = 0;
+            } else if (player.x > canvas.width - player.size) {
+                player.x = canvas.width - player.size;
+                player.speed = 0;
+            }
+        }
+    
+        function checkCollision(a, b) {
+            return a.x < b.x + b.size &&
+                   a.x + a.size > b.x &&
+                   a.y < b.y + b.size &&
+                   a.y + a.size > b.y;
+        }
+    
+        function startLevelTransition() {
+            levelTransition = true;
+            transitionTimer = 0;
+            levelCompleteScreen.style.display = "block";
+            levelCompleteSound.play();
+    
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 50;
+    
+            player.projectiles = [];
+            bossProjectiles = [];
+        }
+    
+        function showWinScreen() {
+            gameRunning = false;
+            winScreen.style.display = "block";
+            winScoreDisplay.textContent = score;
+            victorySound.play();
+            winScreen.classList.add("victory-animation");
+        }
+    
+        function update() {
+            if (!gameRunning || gamePaused) return;
+    
+            if (levelTransition) {
+                transitionTimer += 16;
+                if (transitionTimer >= transitionDuration) {
+                    levelTransition = false;
+                    levelCompleteScreen.style.display = "none";
+                    if (currentLevel <= 5) {
+                        bosses.push(new Boss(currentLevel));
+                    }
+                }
+                return;
+            }
+    
+            // Update explosions
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                if (!explosions[i].update()) {
+                    explosions.splice(i, 1);
+                }
+            }
+    
+            updatePlayer();
+    
+            bosses.forEach((boss, bossIndex) => {
+                boss.update();
+    
+                player.projectiles.forEach((projectile, pIndex) => {
+                    // Check collision with main boss (if not invulnerable)
+                    if (boss.phase !== 1 && checkCollision(projectile, boss)) {
+                        boss.health -= 10;
+                        score += 10; // Add score for each hit
+                        bossHitSound.play();
+                        player.projectiles.splice(pIndex, 1);
+    
+                        if (boss.health <= 0) {
+                            // Create explosion when boss dies
+                            explosions.push(new Explosion(
+                                boss.x + boss.size/2,
+                                boss.y + boss.size/2,
+                                boss.size * 1.5
+                            ));
+                            explosionSound.play();
+                            
+                            bosses.splice(bossIndex, 1);
+                            score += 100 * currentLevel; // Bonus for defeating boss
+                            currentLevel++;
+                            if (currentLevel <= 5) {
+                                startLevelTransition();
+                            } else {
+                                showWinScreen();
+                            }
+                        }
+                    }
+                    
+                    // Check collision with clones (level 2)
+                    if (boss.level === 2) {
+                        boss.clones.forEach((clone, cloneIndex) => {
+                            if (checkCollision(projectile, clone)) {
+                                clone.health -= 10;
+                                score += 10; // Add score for hitting clones
+                                player.projectiles.splice(pIndex, 1);
+                            }
+                        });
+                    }
+                });
+    
+                if (checkCollision(player, boss)) {
+                    gameRunning = false;
+                    gameOverScreen.style.display = "block";
+                    finalScoreDisplay.textContent = score;
+                    gameOverSound.play();
+                }
+    
+                // Check collisions with minions (Level 3 and 5)
+                if (boss.level === 3 || boss.level === 5) {
+                    boss.minions.forEach((minion, minionIndex) => {
+                        // Player projectile vs minion
+                        player.projectiles.forEach((projectile, pIndex) => {
+                            if (checkCollision(projectile, minion)) {
+                                minion.health -= 10;
+                                score += 10; // Add score for hitting minions
+                                player.projectiles.splice(pIndex, 1);
+                            }
+                        });
+                        
+                        // Player vs minion
+                        if (checkCollision(player, minion)) {
+                            gameRunning = false;
+                            gameOverScreen.style.display = "block";
+                            finalScoreDisplay.textContent = score;
+                            gameOverSound.play();
+                        }
+                    });
+                }
+                
+                // Check collisions with clones (level 2)
+                if (boss.level === 2) {
+                    boss.clones.forEach(clone => {
+                        if (checkCollision(player, clone)) {
+                            gameRunning = false;
+                            gameOverScreen.style.display = "block";
+                            finalScoreDisplay.textContent = score;
+                            gameOverSound.play();
+                        }
+                    });
+                }
+            });
+    
+            bossProjectiles.forEach((projectile, index) => {
+                projectile.update();
+    
+                if (checkCollision(player, projectile)) {
+                    gameRunning = false;
+                    gameOverScreen.style.display = "block";
+                    finalScoreDisplay.textContent = score;
+                    gameOverSound.play();
+                }
+    
+                if (projectile.y > canvas.height || projectile.x < 0 || projectile.x > canvas.width) {
+                    bossProjectiles.splice(index, 1);
+                }
+            });
+    
+            player.projectiles.forEach((projectile, index) => {
+                projectile.update();
+                if (projectile.y < 0) {
+                    player.projectiles.splice(index, 1);
+                }
+            });
+    
+            // Update UI
+            scoreDisplay.textContent = "Score: " + score;
+            levelDisplay.textContent = "Level: " + currentLevel;
+            if (bosses.length > 0) {
+                bossHealthDisplay.textContent = "Boss Health: " + bosses[0].health;
+            }
+        }
+    
+        function draw() {
+            // Draw starfield background
+            drawStars();
+    
+            // Draw explosions
+            explosions.forEach(explosion => explosion.draw());
+    
+            // Draw player
+            ctx.fillStyle = "blue";
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+    
+            // Draw boss
+            bosses.forEach(boss => boss.draw());
+    
+            // Draw projectiles
+            bossProjectiles.forEach(projectile => projectile.draw());
+            player.projectiles.forEach(projectile => projectile.draw());
+        }
+    
+        function gameLoop() {
+            if (gameRunning) {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    
+        restartButton.addEventListener("click", () => {
+            location.reload();
+        });
+    
+        menuFromGameOver.addEventListener("click", goToMenu);
+    
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>

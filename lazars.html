@@ -593,8 +593,8 @@
     // Movement variables
     let targetX = 20;
     let targetY = 280;
-    const moveSpeed = 0.2;
-    const moveDistance = 10;
+    const moveSpeed = 1.5;
+    const moveDistance = 20;
 
     // Level configurations
     const levels = [
@@ -698,7 +698,7 @@
       { // Level 6 - Spiral Maze
         name: "SPIRAL MAZE",
         lasers: [
-          { type: 'rotating', left: 400, top: 300, speed: 10 },
+          { type: 'vertical', left: 400, speed: 3 },
           { type: 'horizontal', top: 100, speed: 2 },
           { type: 'horizontal', top: 500, speed: 2, delay: 1 }
         ],
@@ -744,8 +744,8 @@
       { // Level 8 - Final Showdown
         name: "FINAL SHOWDOWN",
         lasers: [
-          { type: 'rotating', left: 200, top: 150, speed: 22, delay: 1 },
-          { type: 'rotating', left: 600, top: 450, speed: 30, delay: 3 },
+          { type: 'vertical', left: 200, speed: 4, delay: 1 },
+          { type: 'vertical', left: 600, speed: 5, delay: 3 },
           { type: 'vertical', left: 300, speed: 3 },
           { type: 'vertical', left: 500, speed: 3, delay: 1.5 },
           { type: 'horizontal', top: 300, speed: 2.5 }

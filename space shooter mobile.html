@@ -3,15 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dot Shooter (Mobile)</title>
+    <title>Dot Shooter</title>
     <style>
-        body { margin: 0; overflow: hidden; background: black; touch-action: none; }
-        canvas { display: block; background: black; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: black; 
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        canvas { 
+            display: block; 
+            background: black; 
+            touch-action: none;
+        }
         #score, #highScore {
             position: absolute;
             top: 10px;
             color: #00aaff;
-            font-size: 20px;
+            font-size: 24px;
             font-family: Arial, sans-serif;
             font-weight: bold;
             text-shadow: 1px 1px 2px black;
@@ -29,10 +44,12 @@
             display: none;
             color: white;
             font-family: Arial, sans-serif;
+            width: 90%;
+            max-width: 400px;
         }
 
         #gameOver h1, #pauseScreen h1 {
-            font-size: 60px;
+            font-size: 48px;
             margin: 0;
             animation: pulse 1.5s infinite;
             color: #ff4444;
@@ -53,7 +70,7 @@
 
         #gameOver button, #pauseScreen button {
             font-size: 24px;
-            padding: 10px 20px;
+            padding: 15px 30px;
             margin: 10px;
             background: #00aaff;
             border: none;
@@ -61,7 +78,9 @@
             cursor: pointer;
             border-radius: 5px;
             transition: background 0.3s;
-            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            width: 80%;
+            max-width: 200px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
         #gameOver button:hover, #pauseScreen button:hover {
@@ -82,40 +101,57 @@
             left: 50%;
             transform: translateX(-50%);
             color: white;
-            font-size: 30px;
+            font-size: 40px;
             cursor: pointer;
             z-index: 100;
             background: rgba(0, 0, 0, 0.5);
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             text-align: center;
-            line-height: 40px;
+            line-height: 60px;
             border-radius: 50%;
             user-select: none;
-            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            text-shadow: 1px 1px 2px black;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        #shootButton {
+        #pauseButton:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #controls {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .control-btn {
             width: 80px;
             height: 80px;
-            background: rgba(0, 170, 255, 0.5);
+            background: rgba(0, 170, 255, 0.3);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             color: white;
-            font-size: 24px;
+            font-size: 40px;
             user-select: none;
             touch-action: none;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        #shootButton:active {
-            background: rgba(0, 170, 255, 0.8);
-            transform: scale(0.95);
+        #shootBtn {
+            position: absolute;
+            right: 20px;
+            bottom: 120px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 170, 0, 0.3);
         }
 
         @keyframes pulse {
@@ -124,26 +160,20 @@
             100% { transform: scale(1); }
         }
 
-        /* Mobile specific styles */
-        @media (max-width: 768px) {
-            #score, #highScore {
-                font-size: 16px;
+        /* Landscape orientation adjustments */
+        @media (orientation: landscape) {
+            #controls {
+                bottom: 10px;
             }
-            
-            #shootButton {
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 30px;
+            }
+            #shootBtn {
                 width: 70px;
                 height: 70px;
-                bottom: 20px;
-                right: 20px;
-            }
-            
-            #gameOver h1, #pauseScreen h1 {
-                font-size: 40px;
-            }
-            
-            #gameOver button, #pauseScreen button {
-                font-size: 20px;
-                padding: 8px 16px;
+                bottom: 80px;
             }
         }
     </style>
@@ -152,7 +182,6 @@
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
     <div id="pauseButton">⏸</div>
-    <div id="shootButton">FIRE</div>
     
     <div id="gameOver">
         <h1>Game Over</h1>
@@ -167,6 +196,13 @@
         <button id="resumeButton">Resume</button>
         <button id="menuFromPause">Menu</button>
     </div>
+    
+    <!-- Mobile controls -->
+    <div id="controls">
+        <div class="control-btn" id="leftBtn">←</div>
+        <div class="control-btn" id="rightBtn">→</div>
+    </div>
+    <div class="control-btn" id="shootBtn">🔫</div>
     
     <canvas id="gameCanvas"></canvas>
 
@@ -191,7 +227,9 @@
         const resumeButton = document.getElementById("resumeButton");
         const menuFromPauseButton = document.getElementById("menuFromPause");
         const pauseButton = document.getElementById("pauseButton");
-        const shootButton = document.getElementById("shootButton");
+        const leftBtn = document.getElementById("leftBtn");
+        const rightBtn = document.getElementById("rightBtn");
+        const shootBtn = document.getElementById("shootBtn");
 
         // Audio elements
         const collectSound = document.getElementById("collectSound");
@@ -201,7 +239,7 @@
         const shootSound = document.getElementById("shootSound");
         const explosionSound = document.getElementById("explosionSound");
 
-        // Set canvas to full window size
+        // Set canvas size to window size
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -218,12 +256,12 @@
         const player = { 
             x: canvas.width / 2, 
             y: canvas.height - 50, 
-            size: 20, 
+            size: 30, // Slightly larger for mobile
             speed: 0,
-            maxSpeed: 7,
-            acceleration: 0.2,
-            deceleration: 0.1,
-            hitboxRadius: 10, // Half of size for square player
+            maxSpeed: 10, // Increased for better mobile response
+            acceleration: 0.3,
+            deceleration: 0.15,
+            hitboxRadius: 15,
             attachedBlocks: [] 
         };
         
@@ -237,16 +275,16 @@
         let speedIncreaseRate = 0.005;
         let isPaused = false;
         let lastShotTime = 0;
-        const shotCooldown = 300; // Reduced from 400ms to 300ms for faster firing
-
-        // For touch controls
-        let touchStartX = 0;
-        let touchOffsetX = 0;
-        let isTouching = false;
+        const shotCooldown = 300;
+        
+        // Touch control variables
+        let leftPressed = false;
+        let rightPressed = false;
+        let touchId = null;
 
         // Starry background
         let stars = [];
-        const numStars = 200;
+        const numStars = 150; // Reduced for mobile performance
 
         function createStars() {
             for (let i = 0; i < numStars; i++) {
@@ -281,9 +319,9 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.size = 5;
-                this.speed = 10;
-                this.hitboxRadius = 2.5;
+                this.size = 8; // Larger for visibility on mobile
+                this.speed = 12;
+                this.hitboxRadius = 4;
             }
             update() {
                 this.y -= this.speed;
@@ -302,11 +340,11 @@
                 this.x = x;
                 this.y = y;
                 this.particles = [];
-                for (let i = 0; i < 20; i++) {
+                for (let i = 0; i < 15; i++) { // Reduced particles for mobile
                     this.particles.push({
                         x: this.x,
                         y: this.y,
-                        size: Math.random() * 3 + 1,
+                        size: Math.random() * 4 + 1, // Slightly larger
                         speedX: (Math.random() - 0.5) * 5,
                         speedY: (Math.random() - 0.5) * 5,
                         opacity: 1
@@ -317,7 +355,7 @@
                 this.particles.forEach(particle => {
                     particle.x += particle.speedX;
                     particle.y += particle.speedY;
-                    particle.opacity -= 0.02;
+                    particle.opacity -= 0.03; // Faster fade for performance
                 });
             }
             draw() {
@@ -453,10 +491,10 @@
                 this.y += Math.sin(this.angle) * this.speed * difficultyMultiplier;
 
                 this.tail.push({ x: this.x, y: this.y, opacity: 1 });
-                if (this.tail.length > 20) {
+                if (this.tail.length > 15) { // Shorter tail for performance
                     this.tail.shift();
                 }
-                this.tail.forEach(particle => particle.opacity -= 0.05);
+                this.tail.forEach(particle => particle.opacity -= 0.07); // Faster fade
             }
             draw() {
                 ctx.save();
@@ -490,8 +528,86 @@
             }
         }
 
-        // Shoot function
-        function shoot() {
+        pauseButton.addEventListener("click", togglePause);
+        resumeButton.addEventListener("click", togglePause);
+        menuFromPauseButton.addEventListener("click", () => {
+            window.location.href = "menu2.html";
+        });
+
+        // Touch controls
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            leftPressed = true;
+        });
+
+        leftBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            leftPressed = false;
+        });
+
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            rightPressed = true;
+        });
+
+        rightBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            rightPressed = false;
+        });
+
+        shootBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            shootProjectile();
+        });
+
+        // Touch movement for the whole screen
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) { // Only for single touch
+                touchId = e.touches[0].identifier;
+                handleTouchMove(e.touches[0]);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (touchId !== null) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === touchId) {
+                        handleTouchMove(e.changedTouches[i]);
+                        break;
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (touchId !== null) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === touchId) {
+                        touchId = null;
+                        player.speed = 0;
+                        break;
+                    }
+                }
+            }
+        });
+
+        function handleTouchMove(touch) {
+            const touchX = touch.clientX;
+            const threshold = 50; // Dead zone in center
+            
+            if (touchX < canvas.width / 2 - threshold) {
+                player.speed = -player.maxSpeed;
+            } else if (touchX > canvas.width / 2 + threshold) {
+                player.speed = player.maxSpeed;
+            } else {
+                player.speed = 0;
+            }
+        }
+
+        function shootProjectile() {
             const now = Date.now();
             if (now - lastShotTime >= shotCooldown) {
                 projectiles.push(new Projectile(player.x + player.size / 2, player.y));
@@ -500,65 +616,10 @@
             }
         }
 
-        // Touch controls
-        function handleTouchStart(e) {
-            e.preventDefault();
-            isTouching = true;
-            const touchX = e.touches ? e.touches[0].clientX : e.clientX;
-            touchStartX = touchX;
-            touchOffsetX = touchX - player.x;
-            
-            // Check if shoot button was touched
-            const rect = shootButton.getBoundingClientRect();
-            if (touchX >= rect.left && touchX <= rect.right && 
-                e.touches[0].clientY >= rect.top && e.touches[0].clientY <= rect.bottom) {
-                shoot();
-            }
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (!isTouching) return;
-            
-            const touchX = e.touches ? e.touches[0].clientX : e.clientX;
-            player.x = touchX - touchOffsetX;
-            
-            // Keep player within bounds
-            if (player.x < 0) {
-                player.x = 0;
-            } else if (player.x > canvas.width - player.size) {
-                player.x = canvas.width - player.size;
-            }
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            isTouching = false;
-        }
-
-        // Event listeners
-        pauseButton.addEventListener("click", togglePause);
-        resumeButton.addEventListener("click", togglePause);
-        menuFromPauseButton.addEventListener("click", () => {
-            window.location.href = "menu2.html";
-        });
-        shootButton.addEventListener("click", shoot);
-
-        // Touch events
-        canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
-        canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
-        canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
-
-        // Mouse events (for testing on desktop)
-        canvas.addEventListener("mousedown", handleTouchStart);
-        canvas.addEventListener("mousemove", handleTouchMove);
-        canvas.addEventListener("mouseup", handleTouchEnd);
-        canvas.addEventListener("mouseleave", handleTouchEnd);
-
-        // Keyboard controls
+        // Keyboard controls (for testing on desktop)
         window.addEventListener("keydown", (e) => {
             if (e.key === " ") {
-                shoot();
+                shootProjectile();
             } else if (e.key === "Escape") {
                 togglePause();
             } else {
@@ -587,10 +648,10 @@
         function update() {
             if (isPaused) return;
 
-            // Player movement (for keyboard)
-            if (keys["ArrowLeft"]) {
+            // Player movement - handle both touch buttons and keyboard
+            if (leftPressed || keys["ArrowLeft"] || keys["a"] || keys["A"]) {
                 player.speed = Math.max(player.speed - player.acceleration, -player.maxSpeed);
-            } else if (keys["ArrowRight"]) {
+            } else if (rightPressed || keys["ArrowRight"] || keys["d"] || keys["D"]) {
                 player.speed = Math.min(player.speed + player.acceleration, player.maxSpeed);
             } else {
                 if (player.speed > 0) {
@@ -720,8 +781,8 @@
                 const cooldownPercent = (Date.now() - lastShotTime) / shotCooldown;
                 ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
                 ctx.beginPath();
-                ctx.arc(player.x + player.size/2, player.y - 15, 10, -Math.PI/2, -Math.PI/2 + (2 * Math.PI * cooldownPercent));
-                ctx.lineTo(player.x + player.size/2, player.y - 15);
+                ctx.arc(player.x + player.size/2, player.y - 20, 15, -Math.PI/2, -Math.PI/2 + (2 * Math.PI * cooldownPercent));
+                ctx.lineTo(player.x + player.size/2, player.y - 20);
                 ctx.fill();
             }
         }

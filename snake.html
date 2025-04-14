@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game - Visual Edition</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #game-board {
+            background-color: #121212;
+            display: block;
+        }
+        
+        #score-display {
+            margin-top: 15px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+        
+        #controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 70%;
+            max-width: 300px;
+        }
+        
+        #map-selector {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 420px;
+        }
+        
+        .map-btn {
+            width: 90px;
+            padding: 8px 5px;
+            font-size: 0.9rem;
+        }
+        
+        .active-map {
+            background: rgba(46, 125, 50, 0.7);
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+        }
+        
+        #final-score {
+            font-size: 1.3rem;
+            margin: 15px 0;
+        }
+        
+        #restart-btn {
+            background: rgba(76, 175, 80, 0.7);
+            font-size: 1.1rem;
+            padding: 10px 25px;
+        }
+        
+        #restart-btn:hover {
+            background: rgba(46, 125, 50, 0.8);
+        }
+        
+        .particle {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Snake Game - Visual Edition</h1>
+    
+    <div id="map-selector">
+        <button class="map-btn" data-map="classic">Classic</button>
+        <button class="map-btn" data-map="box">Box</button>
+        <button class="map-btn" data-map="maze1">Maze 1</button>
+        <button class="map-btn" data-map="maze2">Maze 2</button>
+        <button class="map-btn" data-map="tunnels">Tunnels</button>
+        <button class="map-btn" data-map="islands">Islands</button>
+        <button class="map-btn" data-map="chambers">Chambers</button>
+        <button class="map-btn" data-map="spiral">Spiral</button>
+    </div>
+    
+    <div id="game-container">
+        <canvas id="game-board" width="400" height="400"></canvas>
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <p id="final-score">Score: 0</p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+    
+    <div id="score-display">Score: <span id="score-value">0</span></div>
+    
+    <div id="controls">
+        <button id="pause-btn">Pause (P)</button>
+        <button id="sound-btn">Sound: ON</button>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('game-board');
+        const ctx = canvas.getContext('2d');
+        const scoreValue = document.getElementById('score-value');
+        const gameOverDisplay = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const soundBtn = document.getElementById('sound-btn');
+        const mapButtons = document.querySelectorAll('.map-btn');
+        
+        const boxSize = 20;
+        let snake = [];
+        let direction = 'right';
+        let food = {};
+        let score = 0;
+        let gameInterval;
+        let gameSpeed = 150;
+        let isPaused = false;
+        let soundOn = true;
+        let currentMap = 'classic';
+        let walls = [];
+        let particles = [];
+        
+        // Sound effects
+        const eatSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3');
+        const crashSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3');
+        
+        // Map configurations
+        const maps = {
+            classic: {
+                name: "Classic",
+                walls: [],
+                bgColor: "#121212",
+                wallColor: "#777",
+                snakeColor: "#4CAF50",
+                headColor: "#2E7D32",
+                foodColor: "#F44336"
+            },
+            box: {
+                name: "Box",
+                walls: (() => {
+                    const walls = [];
+                    // Border walls
+                    for (let i = 0; i < canvas.width; i += boxSize) {
+                        walls.push({x: i, y: 0});
+                        walls.push({x: i, y: canvas.height - boxSize});
+                    }
+                    for (let i = boxSize; i < canvas.height - boxSize; i += boxSize) {
+                        walls.push({x: 0, y: i});
+                        walls.push({x: canvas.width - boxSize, y: i});
+                    }
+                    return walls;
+                })(),
+                bgColor: "#0a0a1a",
+                wallColor: "#3a3a7a",
+                snakeColor: "#4CAF50",
+                headColor: "#2E7D32",
+                foodColor: "#FF9800"
+            },
+            maze1: {
+                name: "Maze 1",
+                walls: (() => {
+                    const walls = [];
+                    // Border
+                    for (let i = 0; i < canvas.width; i += boxSize) {
+                        walls.push({x: i, y: 0});
+                        walls.push({x: i, y: canvas.height - boxSize});
+                    }
+                    for (let i = boxSize; i < canvas.height - boxSize; i += boxSize) {
+                        walls.push({x: 0, y: i});
+                        walls.push({x: canvas.width - boxSize, y: i});
+                    }
+                    
+                    // Inner walls - cross pattern
+                    for (let i = 2 * boxSize; i < canvas.width - 2 * boxSize; i += boxSize) {
+                        if (i !== 10 * boxSize) walls.push({x: i, y: 10 * boxSize});
+                    }
+                    for (let i = 2 * boxSize; i < canvas.height - 2 * boxSize; i += boxSize) {
+                        if (i !== 10 * boxSize) walls.push({x: 10 * boxSize, y: i});
+                    }
+                    
+                    // Four corner blocks
+                    for (let i = 2 * boxSize; i < 6 * boxSize; i += boxSize) {
+                        for (let j = 2 * boxSize; j < 6 * boxSize; j += boxSize) {
+                            if (i === 4 * boxSize && j === 4 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 14 * boxSize; i < 18 * boxSize; i += boxSize) {
+                        for (let j = 2 * boxSize; j < 6 * boxSize; j += boxSize) {
+                            if (i === 16 * boxSize && j === 4 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 2 * boxSize; i < 6 * boxSize; i += boxSize) {
+                        for (let j = 14 * boxSize; j < 18 * boxSize; j += boxSize) {
+                            if (i === 4 * boxSize && j === 16 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 14 * boxSize; i < 18 * boxSize; i += boxSize) {
+                        for (let j = 14 * boxSize; j < 18 * boxSize; j += boxSize) {
+                            if (i === 16 * boxSize && j === 16 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    
+                    return walls;
+                })(),
+                bgColor: "#1a1a2e",
+                wallColor: "#4a4a8a",
+                snakeColor: "#00BCD4",
+                headColor: "#0097A7",
+                foodColor: "#FF5722"
+            },
+            maze2: {
+                name: "Maze 2",
+                walls: (() => {
+                    const walls = [];
+                    // Border with openings
+                    for (let i = boxSize; i < canvas.width - boxSize; i += boxSize) {
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: i, y: 0});
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: i, y: canvas.height - boxSize});
+                    }
+                    for (let i = boxSize; i < canvas.height - boxSize; i += boxSize) {
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: 0, y: i});
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: canvas.width - boxSize, y: i});
+                    }
+                    
+                    // Central square with openings
+                    for (let i = 6 * boxSize; i <= 14 * boxSize; i += boxSize) {
+                        for (let j = 6 * boxSize; j <= 14 * boxSize; j += boxSize) {
+                            if ((i === 6 * boxSize || i === 14 * boxSize) && (j !== 10 * boxSize)) {
+                                walls.push({x: i, y: j});
+                            }
+                            if ((j === 6 * boxSize || j === 14 * boxSize) && (i !== 10 * boxSize)) {
+                                walls.push({x: i, y: j});
+                            }
+                        }
+                    }
+                    
+                    // Diagonal walls
+                    for (let i = 2 * boxSize; i <= 6 * boxSize; i += boxSize) {
+                        walls.push({x: i, y: i});
+                        walls.push({x: canvas.width - i - boxSize, y: i});
+                        walls.push({x: i, y: canvas.height - i - boxSize});
+                        walls.push({x: canvas.width - i - boxSize, y: canvas.height - i - boxSize});
+                    }
+                    
+                    return walls;
+                })(),
+                bgColor: "#2d0a3a",
+                wallColor: "#6a1b9a",
+                snakeColor: "#FFC107",
+                headColor: "#FFA000",
+                foodColor: "#E91E63"
+            },
+            tunnels: {
+                name: "Tunnels",
+                walls: (() => {
+                    const walls = [];
+                    // No border - open space
+                    
+                    // Circular tunnel pattern
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const radius = 7 * boxSize;
+                    
+                    // Outer ring
+                    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 16) {
+                        const x = centerX + Math.cos(angle) * radius;
+                        const y = centerY + Math.sin(angle) * radius;
+                        walls.push({x: Math.round(x / boxSize) * boxSize, y: Math.round(y / boxSize) * boxSize});
+                    }
+                    
+                    // Inner ring
+                    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+                        const x = centerX + Math.cos(angle) * (radius / 2);
+                        const y = centerY + Math.sin(angle) * (radius / 2);
+                        walls.push({x: Math.round(x / boxSize) * boxSize, y: Math.round(y / boxSize) * boxSize});
+                    }
+                    
+                    // Connecting tunnels
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (Math.PI * 2 / 4) * i;
+                        for (let r = radius / 2 + boxSize; r < radius - boxSize; r += boxSize) {
+                            const x = centerX + Math.cos(angle) * r;
+                            const y = centerY + Math.sin(angle) * r;
+                            walls.push({x: Math.round(x / boxSize) * boxSize, y: Math.round(y / boxSize) * boxSize});
+                        }
+                    }
+                    
+                    return walls;
+                })(),
+                bgColor: "#0d1b2a",
+                wallColor: "#415a77",
+                snakeColor: "#ff9e00",
+                headColor: "#ff7b00",
+                foodColor: "#ff0054",
+                foodGlow: true
+            },
+            islands: {
+                name: "Islands",
+                walls: (() => {
+                    const walls = [];
+                    // No border - open space
+                    
+                    // Four central islands
+                    for (let i = 5 * boxSize; i <= 15 * boxSize; i += 10 * boxSize) {
+                        for (let j = 5 * boxSize; j <= 15 * boxSize; j += 10 * boxSize) {
+                            for (let x = -1; x <= 1; x++) {
+                                for (let y = -1; y <= 1; y++) {
+                                    if (x !== 0 || y !== 0) {
+                                        walls.push({x: i + x * boxSize, y: j + y * boxSize});
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Corner pillars
+                    walls.push({x: boxSize, y: boxSize});
+                    walls.push({x: canvas.width - 2 * boxSize, y: boxSize});
+                    walls.push({x: boxSize, y: canvas.height - 2 * boxSize});
+                    walls.push({x: canvas.width - 2 * boxSize, y: canvas.height - 2 * boxSize});
+                    
+                    return walls;
+                })(),
+                bgColor: "#003049",
+                wallColor: "#669bbc",
+                snakeColor: "#f77f00",
+                headColor: "#d62828",
+                foodColor: "#fcbf49"
+            },
+            chambers: {
+                name: "Chambers",
+                walls: (() => {
+                    const walls = [];
+                    // Solid border
+                    for (let i = 0; i < canvas.width; i += boxSize) {
+                        walls.push({x: i, y: 0});
+                        walls.push({x: i, y: canvas.height - boxSize});
+                    }
+                    for (let i = boxSize; i < canvas.height - boxSize; i += boxSize) {
+                        walls.push({x: 0, y: i});
+                        walls.push({x: canvas.width - boxSize, y: i});
+                    }
+                    
+                    // Four chambers with small openings
+                    // Vertical divider
+                    for (let i = boxSize; i < canvas.height - boxSize; i += boxSize) {
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: 10 * boxSize, y: i});
+                    }
+                    // Horizontal divider
+                    for (let i = boxSize; i < canvas.width - boxSize; i += boxSize) {
+                        if (i < 8 * boxSize || i > 12 * boxSize) walls.push({x: i, y: 10 * boxSize});
+                    }
+                    
+                    // Inner blocks in each chamber
+                    for (let i = 3 * boxSize; i <= 7 * boxSize; i += boxSize) {
+                        for (let j = 3 * boxSize; j <= 7 * boxSize; j += boxSize) {
+                            if (i === 5 * boxSize && j === 5 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 13 * boxSize; i <= 17 * boxSize; i += boxSize) {
+                        for (let j = 3 * boxSize; j <= 7 * boxSize; j += boxSize) {
+                            if (i === 15 * boxSize && j === 5 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 3 * boxSize; i <= 7 * boxSize; i += boxSize) {
+                        for (let j = 13 * boxSize; j <= 17 * boxSize; j += boxSize) {
+                            if (i === 5 * boxSize && j === 15 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    for (let i = 13 * boxSize; i <= 17 * boxSize; i += boxSize) {
+                        for (let j = 13 * boxSize; j <= 17 * boxSize; j += boxSize) {
+                            if (i === 15 * boxSize && j === 15 * boxSize) continue;
+                            walls.push({x: i, y: j});
+                        }
+                    }
+                    
+                    return walls;
+                })(),
+                bgColor: "#212529",
+                wallColor: "#495057",
+                snakeColor: "#38b000",
+                headColor: "#008000",
+                foodColor: "#ff758f"
+            },
+            spiral: {
+                name: "Spiral",
+                walls: (() => {
+                    const walls = [];
+                    // Spiral pattern
+                    let x = 0, y = 0;
+                    let dx = 1, dy = 0;
+                    let segmentLength = canvas.width / boxSize - 1;
+                    
+                    for (let i = 0; i < 4; i++) {
+                        for (let j = 0; j < segmentLength; j++) {
+                            if (x > 0 || y > 0) { // Skip starting corner
+                                walls.push({x: x * boxSize, y: y * boxSize});
+                            }
+                            x += dx;
+                            y += dy;
+                        }
+                        
+                        // Change direction
+                        [dx, dy] = [-dy, dx];
+                        
+                        // Shorten segment every second turn
+                        if (i % 2 === 1) {
+                            segmentLength -= 2;
+                        }
+                    }
+                    
+                    return walls;
+                })(),
+                bgColor: "#10002b",
+                wallColor: "#5a189a",
+                snakeColor: "#9d4edd",
+                headColor: "#7b2cbf",
+                foodColor: "#ff9e00"
+            }
+        };
+        
+        // Initialize the game
+        function initGame() {
+            // Create initial snake
+            snake = [
+                {x: 9 * boxSize, y: 10 * boxSize},
+                {x: 8 * boxSize, y: 10 * boxSize},
+                {x: 7 * boxSize, y: 10 * boxSize}
+            ];
+            
+            direction = 'right';
+            score = 0;
+            scoreValue.textContent = score;
+            gameOverDisplay.style.display = 'none';
+            
+            // Set walls for current map
+            walls = [...maps[currentMap].walls];
+            
+            generateFood();
+            
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, gameSpeed);
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (isPaused) return;
+            
+            moveSnake();
+            
+            if (checkCollision()) {
+                gameOver();
+                return;
+            }
+            
+            drawGame();
+        }
+        
+        // Move the snake
+        function moveSnake() {
+            const head = {x: snake[0].x, y: snake[0].y};
+            
+            switch (direction) {
+                case 'up': head.y -= boxSize; break;
+                case 'down': head.y += boxSize; break;
+                case 'left': head.x -= boxSize; break;
+                case 'right': head.x += boxSize; break;
+            }
+            
+            snake.unshift(head);
+            
+            // Check if snake ate food
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreValue.textContent = score;
+                if (soundOn) {
+                    eatSound.play();
+                    createParticles(food.x + boxSize/2, food.y + boxSize/2, maps[currentMap].foodColor);
+                }
+                generateFood();
+            } else {
+                snake.pop();
+            }
+        }
+        
+        // Create particles for visual effect
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 3 + 2,
+                    color: color,
+                    speedX: Math.random() * 6 - 3,
+                    speedY: Math.random() * 6 - 3,
+                    life: 30 + Math.random() * 20,
+                    opacity: 1
+                });
+            }
+        }
+        
+        // Update and draw particles
+        function updateParticles() {
+            ctx.save();
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.speedX;
+                p.y += p.speedY;
+                p.life--;
+                p.opacity = p.life / 50;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                ctx.globalAlpha = p.opacity;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+        
+        // Check for collisions
+        function checkCollision() {
+            const head = snake[0];
+            
+            // Check wall collision
+            for (let wall of walls) {
+                if (head.x === wall.x && head.y === wall.y) {
+                    return true;
+                }
+            }
+            
+            // Check self collision
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Generate food at random position
+        function generateFood() {
+            let validPosition = false;
+            
+            while (!validPosition) {
+                validPosition = true;
+                food = {
+                    x: Math.floor(Math.random() * (canvas.width / boxSize)) * boxSize,
+                    y: Math.floor(Math.random() * (canvas.height / boxSize)) * boxSize
+                };
+                
+                // Check walls
+                for (let wall of walls) {
+                    if (food.x === wall.x && food.y === wall.y) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+                
+                // Check snake
+                for (let segment of snake) {
+                    if (food.x === segment.x && food.y === segment.y) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Draw the game
+        function drawGame() {
+            const currentMapStyle = maps[currentMap];
+            
+            // Clear canvas
+            ctx.fillStyle = currentMapStyle.bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw walls with shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            
+            ctx.fillStyle = currentMapStyle.wallColor;
+            for (let wall of walls) {
+                ctx.fillRect(wall.x, wall.y, boxSize, boxSize);
+            }
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            
+            // Draw snake with gradient
+            for (let i = 0; i < snake.length; i++) {
+                const segment = snake[i];
+                const gradient = ctx.createRadialGradient(
+                    segment.x + boxSize/2, segment.y + boxSize/2, 0,
+                    segment.x + boxSize/2, segment.y + boxSize/2, boxSize/2
+                );
+                
+                if (i === 0) {
+                    // Head
+                    gradient.addColorStop(0, currentMapStyle.headColor);
+                    gradient.addColorStop(1, lightenColor(currentMapStyle.headColor, 20));
+                } else {
+                    // Body
+                    gradient.addColorStop(0, currentMapStyle.snakeColor);
+                    gradient.addColorStop(1, lightenColor(currentMapStyle.snakeColor, 20));
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(segment.x, segment.y, boxSize, boxSize, 4);
+                ctx.fill();
+                
+                // Add eye to head
+                if (i === 0) {
+                    ctx.fillStyle = 'white';
+                    const eyeSize = boxSize / 5;
+                    const eyeOffsetX = direction === 'left' ? -eyeSize : 
+                                    direction === 'right' ? eyeSize : 0;
+                    const eyeOffsetY = direction === 'up' ? -eyeSize : 
+                                    direction === 'down' ? eyeSize : 0;
+                    
+                    ctx.beginPath();
+                    ctx.arc(
+                        segment.x + boxSize/2 + eyeOffsetX/2, 
+                        segment.y + boxSize/2 + eyeOffsetY/2, 
+                        eyeSize, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+            }
+            
+            // Draw food with glow effect
+            if (currentMapStyle.foodGlow) {
+                ctx.shadowColor = currentMapStyle.foodColor;
+                ctx.shadowBlur = 15;
+            }
+            
+            ctx.fillStyle = currentMapStyle.foodColor;
+            ctx.beginPath();
+            const centerX = food.x + boxSize / 2;
+            const centerY = food.y + boxSize / 2;
+            ctx.arc(centerX, centerY, boxSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            
+            // Draw particles
+            updateParticles();
+        }
+        
+        // Helper function to lighten colors
+        function lightenColor(color, percent) {
+            const num = parseInt(color.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            
+            return "#" + (
+                0x1000000 +
+                (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+                (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+                (B < 255 ? (B < 1 ? 0 : B) : 255)
+            ).toString(16).slice(1);
+        }
+        
+        // Game over
+        function gameOver() {
+            clearInterval(gameInterval);
+            if (soundOn) {
+                crashSound.play();
+                createParticles(snake[0].x + boxSize/2, snake[0].y + boxSize/2, maps[currentMap].headColor);
+            }
+            finalScoreDisplay.textContent = `Score: ${score}`;
+            gameOverDisplay.style.display = 'block';
+        }
+        
+        // Toggle pause
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? "Resume (P)" : "Pause (P)";
+        }
+        
+        // Toggle sound
+        function toggleSound() {
+            soundOn = !soundOn;
+            soundBtn.textContent = `Sound: ${soundOn ? 'ON' : 'OFF'}`;
+        }
+        
+        // Set map
+        function setMap(map) {
+            currentMap = map;
+            mapButtons.forEach(btn => {
+                btn.classList.toggle('active-map', btn.dataset.map === map);
+            });
+            initGame();
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', function(event) {
+            if (isPaused && event.key !== 'p') return;
+            
+            switch(event.key) {
+                case 'ArrowUp': if (direction !== 'down') direction = 'up'; break;
+                case 'ArrowDown': if (direction !== 'up') direction = 'down'; break;
+                case 'ArrowLeft': if (direction !== 'right') direction = 'left'; break;
+                case 'ArrowRight': if (direction !== 'left') direction = 'right'; break;
+                case 'p': togglePause(); break;
+            }
+        });
+        
+        restartBtn.addEventListener('click', initGame);
+        pauseBtn.addEventListener('click', togglePause);
+        soundBtn.addEventListener('click', toggleSound);
+        mapButtons.forEach(btn => {
+            btn.addEventListener('click', () => setMap(btn.dataset.map));
+        });
+        
+        // Start the game
+        setMap('classic');
+    </script>
+</body>
+</html>

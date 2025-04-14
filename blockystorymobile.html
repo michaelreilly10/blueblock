@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Journey: Back to the Blocky Planets</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Space Journey: Back to the Blocky Planets (Mobile)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
         
@@ -20,6 +20,7 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
+            touch-action: manipulation;
         }
         
         #game-container {
@@ -698,69 +699,127 @@
             margin-top: 20px;
         }
 
-        /* Virtual Joystick Styles */
-        #joystick-container {
+        /* Mobile controls */
+        #mobile-controls {
             position: fixed;
-            bottom: 50px;
-            left: 50px;
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.3);
-            display: none;
-            z-index: 200;
-            touch-action: none;
-        }
-
-        #joystick-base {
-            position: absolute;
+            bottom: 20px;
+            left: 0;
             width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        #joystick-thumb {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            touch-action: none;
-        }
-
-        /* Fire button for mobile */
-        #fire-button {
-            position: fixed;
-            bottom: 50px;
-            right: 50px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
             display: none;
             z-index: 200;
+            pointer-events: none;
+        }
+        
+        .d-pad {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-left: 30px;
+        }
+        
+        .d-pad-center {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            top: 45px;
+            left: 45px;
+            pointer-events: none;
+        }
+        
+        .d-pad-up, .d-pad-down, .d-pad-left, .d-pad-right {
+            position: absolute;
+            background: rgba(0, 180, 255, 0.5);
+            border-radius: 10px;
+            pointer-events: auto;
+            transition: all 0.1s;
+        }
+        
+        .d-pad-up {
+            width: 60px;
+            height: 40px;
+            top: 0;
+            left: 45px;
+        }
+        
+        .d-pad-down {
+            width: 60px;
+            height: 40px;
+            bottom: 0;
+            left: 45px;
+        }
+        
+        .d-pad-left {
+            width: 40px;
+            height: 60px;
+            top: 45px;
+            left: 0;
+        }
+        
+        .d-pad-right {
+            width: 40px;
+            height: 60px;
+            top: 45px;
+            right: 0;
+        }
+        
+        #action-buttons {
+            position: absolute;
+            right: 30px;
+            bottom: 30px;
+        }
+        
+        #pause-mobile-btn {
+            padding: 15px 25px;
+            background: rgba(0, 180, 255, 0.7);
             color: white;
+            border: none;
+            border-radius: 30px;
             font-family: 'Orbitron', sans-serif;
             font-size: 16px;
-            text-align: center;
-            line-height: 80px;
-            touch-action: none;
+            pointer-events: auto;
         }
-
-        /* Media query for mobile devices */
+        
+        /* Show mobile controls only on mobile devices */
+        @media (max-width: 768px) and (hover: none) {
+            #mobile-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
+            #pause-btn {
+                display: none;
+            }
+        }
+        
+        /* Make player larger on mobile */
         @media (max-width: 768px) {
-            #joystick-container {
-                display: block;
+            #player {
+                width: 50px;
+                height: 50px;
             }
-            #fire-button {
-                display: block;
+            
+            /* Make text larger on mobile */
+            #score-display, #level-display, #chapter-display {
+                font-size: 22px;
             }
+            
+            #mission-display {
+                font-size: 18px;
+            }
+        }
+        
+        /* Touch feedback */
+        .d-pad-up:active, .d-pad-down:active, 
+        .d-pad-left:active, .d-pad-right:active {
+            background: rgba(0, 180, 255, 0.8);
+            transform: scale(0.95);
+        }
+        
+        #pause-mobile-btn:active {
+            background: rgba(0, 180, 255, 0.9);
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -805,7 +864,7 @@
             <h2>Mission Briefing</h2>
             <p>Blocky is trapped on Earth!</p>
             <p>Help him travel through space to get back home at Blocky Planet</p>
-            <p>Use arrow keys to move. Avoid obstacles and reach the right side of each level.</p>
+            <p>Use the on-screen controls to move. Avoid obstacles and reach the right side of each level.</p>
             <button class="btn" id="start-game-btn">Begin Mission</button>
         </div>
         
@@ -817,17 +876,22 @@
             <button class="btn" id="menu-pause-btn">Quit to Menu</button>
         </div>
         
-        <!-- Virtual Joystick for Mobile -->
-        <div id="joystick-container">
-            <div id="joystick-base"></div>
-            <div id="joystick-thumb"></div>
-        </div>
-
-        <!-- Fire Button for Mobile -->
-        <div id="fire-button">FIRE</div>
-        
         <button id="pause-btn">Pause</button>
         <button id="fullscreen-btn">Fullscreen</button>
+        
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div class="d-pad">
+                <div class="d-pad-center"></div>
+                <div class="d-pad-up"></div>
+                <div class="d-pad-down"></div>
+                <div class="d-pad-left"></div>
+                <div class="d-pad-right"></div>
+            </div>
+            <div id="action-buttons">
+                <button id="pause-mobile-btn">Pause</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -863,22 +927,17 @@
         const restartLevelPauseBtn = document.getElementById('restart-level-pause-btn');
         const menuPauseBtn = document.getElementById('menu-pause-btn');
         
-        // Virtual Joystick Elements
-        const joystickContainer = document.getElementById('joystick-container');
-        const joystickThumb = document.getElementById('joystick-thumb');
-        const fireButton = document.getElementById('fire-button');
-
         // Sound effects and background music
         const sounds = {
-            levelComplete: new Audio('level_complete.wav'),
-            gameOver: new Audio('gameover.wav'),
-            chapterComplete: new Audio('victory.wav'),
-            alienShoot: new Audio('alien_shoot.wav'),
-            playerHit: new Audio('player_hit.wav')
+            levelComplete: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3'),
+            gameOver: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-retro-arcade-lose-2027.mp3'),
+            chapterComplete: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3'),
+            alienShoot: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-laser-weapon-shot-1680.mp3'),
+            playerHit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-explosion-2759.mp3')
         };
 
         // Background music
-        const bgMusic = new Audio('music.wav');
+        const bgMusic = new Audio('https://assets.mixkit.co/music/preview/mixkit-space-game-668.mp3');
         bgMusic.loop = true;
         bgMusic.volume = 0.5;
 
@@ -899,7 +958,7 @@
         let score = 0;
         let level = 1;
         let chapter = 1;
-        let gameRunning = false; // Start with game not running
+        let gameRunning = false;
         let frameCount = 0;
         let keysPressed = {};
         let completingLevel = false;
@@ -908,19 +967,18 @@
         let levelPlanets = [];
         let gameWidth = window.innerWidth;
         let gameHeight = window.innerHeight;
-        const playerWidth = 40;
-        const playerHeight = 40;
+        let playerWidth = 40;
+        let playerHeight = 40;
         let isPaused = false;
         
-        // Joystick variables
-        let joystickActive = false;
-        let joystickX = 0;
-        let joystickY = 0;
-        let joystickCenterX = 0;
-        let joystickCenterY = 0;
-        let joystickRadius = 60;
-        let fireButtonPressed = false;
-
+        // Touch control variables
+        let touchControls = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+        
         // Chapter configuration
         const chapters = [
             {
@@ -998,18 +1056,18 @@
                     class: "obstacle-rect",
                     width: () => Math.floor(Math.random() * 60) + 30,
                     height: () => Math.floor(Math.random() * 60) + 30,
-                    movement: "vertical", // Only vertical movement
+                    movement: "vertical",
                     speedMultiplier: 1,
-                    color: () => `hsl(${Math.floor(Math.random() * 60) + 200}, 80%, 60%)` // Blueish
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 200}, 80%, 60%)`
                 },
                 {
                     name: "rect",
                     class: "obstacle-rect",
                     width: () => Math.floor(Math.random() * 80) + 40,
                     height: () => Math.floor(Math.random() * 80) + 40,
-                    movement: "vertical", // Only vertical movement
+                    movement: "vertical",
                     speedMultiplier: 1.2,
-                    color: () => `hsl(${Math.floor(Math.random() * 60) + 30}, 80%, 60%)` // Orange
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 30}, 80%, 60%)`
                 }
             ],
             asteroid: [
@@ -1020,7 +1078,7 @@
                     height: () => Math.floor(Math.random() * 50) + 40,
                     movement: "diagonal",
                     speedMultiplier: 1.3,
-                    color: () => `hsl(${Math.floor(Math.random() * 30) + 20}, 60%, 40%)` // Brown
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 20}, 60%, 40%)`
                 },
                 {
                     name: "asteroid",
@@ -1029,7 +1087,7 @@
                     height: () => Math.floor(Math.random() * 70) + 30,
                     movement: "bouncing",
                     speedMultiplier: 1.1,
-                    color: () => `hsl(${Math.floor(Math.random() * 30) + 10}, 70%, 35%)` // Darker brown
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 10}, 70%, 35%)`
                 }
             ],
             circle: [
@@ -1040,7 +1098,7 @@
                     height: () => 40,
                     movement: "bouncing",
                     speedMultiplier: 1.5,
-                    color: () => `hsl(0, 80%, 60%)` // Red
+                    color: () => `hsl(0, 80%, 60%)`
                 },
                 {
                     name: "circle-enemy",
@@ -1049,7 +1107,7 @@
                     height: () => 50,
                     movement: "bouncing",
                     speedMultiplier: 1.2,
-                    color: () => `hsl(0, 80%, 60%)` // Red
+                    color: () => `hsl(0, 80%, 60%)`
                 }
             ],
             blackhole: [
@@ -1060,7 +1118,7 @@
                     height: () => 80,
                     movement: "gravitational",
                     speedMultiplier: 0.8,
-                    color: () => `hsl(200, 80%, 10%)` // Very dark blue
+                    color: () => `hsl(200, 80%, 10%)`
                 },
                 {
                     name: "blackhole",
@@ -1069,7 +1127,7 @@
                     height: () => 120,
                     movement: "gravitational",
                     speedMultiplier: 0.5,
-                    color: () => `hsl(200, 80%, 5%)` // Nearly black
+                    color: () => `hsl(200, 80%, 5%)`
                 },
                 {
                     name: "singularity",
@@ -1078,7 +1136,7 @@
                     height: () => 20,
                     movement: "homing",
                     speedMultiplier: 2.5,
-                    color: () => `hsl(0, 0%, 90%)` // White
+                    color: () => `hsl(0, 0%, 90%)`
                 },
                 {
                     name: "eventhorizon",
@@ -1087,7 +1145,7 @@
                     height: () => 100,
                     movement: "spiral",
                     speedMultiplier: 1.5,
-                    color: () => `hsl(300, 80%, 40%)` // Purple
+                    color: () => `hsl(300, 80%, 40%)`
                 }
             ],
             final: [
@@ -1098,7 +1156,7 @@
                     height: () => 40,
                     movement: "zigzag",
                     speedMultiplier: 1.8,
-                    color: () => `hsl(${Math.floor(Math.random() * 60) + 120}, 80%, 50%)` // Greenish
+                    color: () => `hsl(${Math.floor(Math.random() * 60) + 120}, 80%, 50%)`
                 },
                 {
                     name: "alien-queen",
@@ -1107,7 +1165,7 @@
                     height: () => 80,
                     movement: "homing",
                     speedMultiplier: 1.2,
-                    color: () => `hsl(${Math.floor(Math.random() * 30) + 300}, 80%, 50%)` // Purple
+                    color: () => `hsl(${Math.floor(Math.random() * 30) + 300}, 80%, 50%)`
                 },
                 {
                     name: "alien-swarm",
@@ -1116,7 +1174,7 @@
                     height: () => 30,
                     movement: "swarming",
                     speedMultiplier: 2.0,
-                    color: () => `hsl(${Math.floor(Math.random() * 120) + 60}, 80%, 50%)` // Yellow-green
+                    color: () => `hsl(${Math.floor(Math.random() * 120) + 60}, 80%, 50%)`
                 },
                 {
                     name: "alien-mothership",
@@ -1125,7 +1183,7 @@
                     height: () => 80,
                     movement: "horizontal",
                     speedMultiplier: 0.8,
-                    color: () => `hsl(${Math.floor(Math.random() * 20) + 200}, 80%, 40%)` // Dark blue
+                    color: () => `hsl(${Math.floor(Math.random() * 20) + 200}, 80%, 40%)`
                 }
             ]
         };
@@ -1169,7 +1227,7 @@
                 planet.className = 'level-planet';
                 
                 const size = Math.floor(Math.random() * 60) + 40;
-                const x = Math.floor(Math.random() * (gameWidth - 200)) + 150; // Avoid left side
+                const x = Math.floor(Math.random() * (gameWidth - 200)) + 150;
                 const y = Math.floor(Math.random() * (gameHeight - 100)) + 50;
                 
                 // Random planet color
@@ -1219,7 +1277,6 @@
         }
         
         function darkenColor(color, percent) {
-            // Simple function to darken a color
             return color.replace(/\d+/g, match => Math.max(0, parseInt(match) - percent));
         }
         
@@ -1324,9 +1381,6 @@
             starsContainer.innerHTML = '';
             createStars();
             createLevelPlanets();
-            
-            // Reinitialize joystick position
-            initJoystick();
         }
         
         // Fullscreen functionality
@@ -1436,7 +1490,7 @@
         function createInitialObstacles() {
             const currentChapter = chapters[chapter - 1];
             const baseObstacleCount = 3 + Math.floor(level / 2);
-            const additionalObstacles = Math.min(level, 5); // Max 5 additional obstacles
+            const additionalObstacles = Math.min(level, 5);
             const obstacleCount = baseObstacleCount + additionalObstacles;
             
             for (let i = 0; i < obstacleCount; i++) {
@@ -1494,15 +1548,15 @@
                 startTime: startTime,
                 initialX: initialX,
                 initialY: initialY,
-                angle: 0, // For spiral movement
-                lastShotTime: 0 // For alien shooting
+                angle: 0,
+                lastShotTime: 0
             });
         }
         
         // Create player trail effect
         function createTrail() {
             const now = Date.now();
-            if (now - lastTrailTime > 50) { // Create trail every 50ms
+            if (now - lastTrailTime > 50) {
                 const trail = document.createElement('div');
                 trail.className = 'trail';
                 trail.style.left = (playerX + playerWidth/2 - 5) + 'px';
@@ -1535,18 +1589,18 @@
         
         // Alien ships shoot at player
         function handleAlienShooting() {
-            if (chapter !== 5) return; // Only aliens in chapter 5
+            if (chapter !== 5) return;
             
             const now = Date.now();
-            if (now - lastAlienShotTime < 1000) return; // Limit shooting rate
+            if (now - lastAlienShotTime < 1000) return;
             
             lastAlienShotTime = now;
             
             // Find all alien ships that can shoot
             const shootingAliens = obstacles.filter(obstacle => 
                 obstacle.type.includes('alien') && 
-                now - obstacle.lastShotTime > 2000 && // 2 second cooldown
-                Math.random() < 0.3 // 30% chance to shoot
+                now - obstacle.lastShotTime > 2000 &&
+                Math.random() < 0.3
             );
             
             // Make them shoot at player
@@ -1561,145 +1615,90 @@
             });
         }
         
-        // Initialize joystick position
-        function initJoystick() {
-            const rect = joystickContainer.getBoundingClientRect();
-            joystickCenterX = rect.left + rect.width / 2;
-            joystickCenterY = rect.top + rect.height / 2;
-            joystickRadius = rect.width / 2;
-        }
-
-        // Handle joystick touch start
-        joystickContainer.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            joystickActive = true;
-            updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY);
-        });
-
-        // Handle joystick touch move
-        document.addEventListener('touchmove', (e) => {
-            if (joystickActive) {
+        // Setup mobile controls
+        function setupMobileControls() {
+            const upBtn = document.querySelector('.d-pad-up');
+            const downBtn = document.querySelector('.d-pad-down');
+            const leftBtn = document.querySelector('.d-pad-left');
+            const rightBtn = document.querySelector('.d-pad-right');
+            const pauseMobileBtn = document.getElementById('pause-mobile-btn');
+            
+            // Touch start events
+            upBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        // Handle joystick touch end
-        document.addEventListener('touchend', (e) => {
-            if (joystickActive) {
+                touchControls.up = true;
+            });
+            downBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                joystickActive = false;
-                resetJoystick();
-            }
-        });
-
-        // Handle fire button
-        fireButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            fireButtonPressed = true;
-            fireButton.style.background = 'rgba(255, 0, 0, 0.6)';
-        });
-
-        fireButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            fireButtonPressed = false;
-            fireButton.style.background = 'rgba(255, 0, 0, 0.3)';
-        });
-
-        // Update joystick position
-        function updateJoystickPosition(touchX, touchY) {
-            const dx = touchX - joystickCenterX;
-            const dy = touchY - joystickCenterY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx);
+                touchControls.down = true;
+            });
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.left = true;
+            });
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.right = true;
+            });
             
-            // Limit thumb to joystick radius
-            const limitedDistance = Math.min(distance, joystickRadius);
-            joystickX = Math.cos(angle) * limitedDistance;
-            joystickY = Math.sin(angle) * limitedDistance;
+            // Touch end events
+            upBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.up = false;
+            });
+            downBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.down = false;
+            });
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.left = false;
+            });
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.right = false;
+            });
             
-            // Update thumb position
-            joystickThumb.style.transform = `translate(${joystickX}px, ${joystickY}px)`;
-            
-            // Normalize values for movement (-1 to 1)
-            const normalizedX = joystickX / joystickRadius;
-            const normalizedY = joystickY / joystickRadius;
-            
-            // Update movement keys based on joystick
-            keysPressed['ArrowLeft'] = normalizedX < -0.3;
-            keysPressed['ArrowRight'] = normalizedX > 0.3;
-            keysPressed['ArrowUp'] = normalizedY < -0.3;
-            keysPressed['ArrowDown'] = normalizedY > 0.3;
-        }
-
-        // Reset joystick position
-        function resetJoystick() {
-            joystickX = 0;
-            joystickY = 0;
-            joystickThumb.style.transform = 'translate(-50%, -50%)';
-            
-            // Reset movement keys
-            keysPressed['ArrowLeft'] = false;
-            keysPressed['ArrowRight'] = false;
-            keysPressed['ArrowUp'] = false;
-            keysPressed['ArrowDown'] = false;
-        }
-        
-        // Main game loop
-        function gameLoop() {
-            if (gameRunning && !completingLevel && !isPaused) {
-                updatePlayer();
-                updateObstacles();
-                updateAlienProjectiles();
-                checkCollisions();
-                checkProjectileCollisions();
-                checkLevelCompletion();
-                handleAlienShooting();
-                frameCount++;
-                
-                createTrail();
-            }
-            
-            requestAnimationFrame(gameLoop);
+            // Pause button
+            pauseMobileBtn.addEventListener('click', togglePause);
         }
         
         // Update player position
         function updatePlayer() {
             let moved = false;
             
-            if (keysPressed['ArrowLeft'] && playerX > 0) {
+            // Use touch controls if on mobile, otherwise keyboard
+            const left = touchControls.left || keysPressed['ArrowLeft'];
+            const right = touchControls.right || keysPressed['ArrowRight'];
+            const up = touchControls.up || keysPressed['ArrowUp'];
+            const down = touchControls.down || keysPressed['ArrowDown'];
+            
+            if (left && playerX > 0) {
                 playerX -= playerSpeed;
                 if (playerX < 0) playerX = 0;
                 moved = true;
             }
-            if (keysPressed['ArrowRight'] && playerX < gameWidth - playerWidth) {
+            if (right && playerX < gameWidth - playerWidth) {
                 playerX += playerSpeed;
                 if (playerX > gameWidth - playerWidth) playerX = gameWidth - playerWidth;
                 moved = true;
             }
-            if (keysPressed['ArrowUp'] && playerY > 0) {
+            if (up && playerY > 0) {
                 playerY -= playerSpeed;
                 if (playerY < 0) playerY = 0;
                 moved = true;
             }
-            if (keysPressed['ArrowDown'] && playerY < gameHeight - playerHeight) {
+            if (down && playerY < gameHeight - playerHeight) {
                 playerY += playerSpeed;
                 if (playerY > gameHeight - playerHeight) playerY = gameHeight - playerHeight;
                 moved = true;
-            }
-            
-            // Mobile fire button
-            if (fireButtonPressed) {
-                // Add mobile fire functionality here if needed
-                // For example, you could make the ship shoot or boost
-                increaseScore(0.5); // Just as an example
             }
             
             player.style.left = playerX + 'px';
             player.style.top = playerY + 'px';
             
             // Increase score based on right movement
-            if (keysPressed['ArrowRight'] || (joystickActive && joystickX > 0)) {
+            if (right) {
                 increaseScore(1);
             }
         }
@@ -1744,7 +1743,7 @@
                         }
                         break;
                         
-                    case 'zigzag': // For alien ships
+                    case 'zigzag':
                         obstacle.x += obstacle.speed * deltaTime * 60;
                         obstacle.y = obstacle.initialY + Math.sin(elapsed * 2) * 100;
                         
@@ -1763,7 +1762,7 @@
                         }
                         break;
                         
-                    case 'diagonal': // For triangles
+                    case 'diagonal':
                         obstacle.x += obstacle.speed * obstacle.directionX * deltaTime * 60 * 0.7;
                         obstacle.y += obstacle.speed * obstacle.directionY * deltaTime * 60 * 0.7;
                         
@@ -1785,7 +1784,7 @@
                         }
                         break;
                         
-                    case 'spiral': // For rotating squares
+                    case 'spiral':
                         obstacle.angle += deltaTime * 2;
                         const radius = 50 + elapsed * 10;
                         obstacle.x = obstacle.initialX + Math.cos(obstacle.angle) * radius;
@@ -1801,7 +1800,6 @@
                         break;
                         
                     case 'homing':
-                        // Slower, smoother homing
                         const targetX = playerX + playerWidth/2;
                         const targetY = playerY + playerHeight/2;
                         const dx = targetX - (obstacle.x + obstacle.width/2);
@@ -1809,14 +1807,13 @@
                         const distance = Math.sqrt(dx * dx + dy * dy);
                         
                         if (distance > 0) {
-                            // Reduced speed multiplier makes them slower
                             const speed = obstacle.speed * 0.5;
                             obstacle.x += (dx / distance) * speed * deltaTime * 60;
                             obstacle.y += (dy / distance) * speed * deltaTime * 60;
                         }
                         break;
                         
-                    case 'bouncing': // For circle enemies and asteroids
+                    case 'bouncing':
                         obstacle.x += obstacle.speed * obstacle.directionX * deltaTime * 60;
                         obstacle.y += obstacle.speed * obstacle.directionY * deltaTime * 60;
                         
@@ -1838,8 +1835,7 @@
                         }
                         break;
                         
-                    case 'swarming': // For alien swarms
-                        // Swarming behavior - moves in groups with some randomness
+                    case 'swarming':
                         obstacle.x += Math.sin(elapsed * 3) * obstacle.speed * deltaTime * 30;
                         obstacle.y += Math.cos(elapsed * 2) * obstacle.speed * deltaTime * 30;
                         
@@ -1852,8 +1848,7 @@
                         if (obstacle.y < -obstacle.height) obstacle.y = gameHeight;
                         break;
                         
-                    case 'gravitational': // For black holes
-                        // Move toward center of screen
+                    case 'gravitational':
                         const centerX = gameWidth / 2;
                         const centerY = gameHeight / 2;
                         const centerDx = centerX - (obstacle.x + obstacle.width/2);
@@ -1871,8 +1866,8 @@
                         const playerDy = playerY - (obstacle.y + obstacle.height/2);
                         const playerDist = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
                         
-                        if (playerDist > 0 && playerDist < 400) { // Increased pull range
-                            const pullStrength = (400 - playerDist) / 400 * 0.8; // Stronger pull
+                        if (playerDist > 0 && playerDist < 400) {
+                            const pullStrength = (400 - playerDist) / 400 * 0.8;
                             playerX += playerDx / playerDist * pullStrength;
                             playerY += playerDy / playerDist * pullStrength;
                             blackholePullActive = true;
@@ -2239,57 +2234,100 @@
             bgMusic.play();
         }
         
-        // Event listeners
-        document.addEventListener('keydown', (e) => {
-            keysPressed[e.key] = true;
-            
-            // Pause game with P key
-            if (e.key === 'p' || e.key === 'P') {
-                togglePause();
+        // Main game loop
+        function gameLoop() {
+            if (gameRunning && !completingLevel && !isPaused) {
+                updatePlayer();
+                updateObstacles();
+                updateAlienProjectiles();
+                checkCollisions();
+                checkProjectileCollisions();
+                checkLevelCompletion();
+                handleAlienShooting();
+                frameCount++;
+                
+                createTrail();
             }
             
-            if (e.key === 'r' && !gameRunning) {
-                resetGame();
-            }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            keysPressed[e.key] = false;
-        });
-        
-        restartLevelBtn.addEventListener('click', restartLevel);
-        restartChapterBtn.addEventListener('click', restartChapter);
-        menuBtn.addEventListener('click', () => {
-            window.location.href = 'menu2.html';
-        });
-        nextLevelBtn.addEventListener('click', nextLevel);
-        menuBtn2.addEventListener('click', () => {
-            window.location.href = 'menu2.html';
-        });
-        startGameBtn.addEventListener('click', startGame);
-        
-        // Pause menu event listeners
-        pauseBtn.addEventListener('click', togglePause);
-        resumeBtn.addEventListener('click', togglePause);
-        restartLevelPauseBtn.addEventListener('click', () => {
-            restartLevel();
-            pauseMenu.style.display = 'none';
-        });
-        menuPauseBtn.addEventListener('click', () => {
-            window.location.href = 'menu2.html';
-        });
-        
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
-        window.addEventListener('resize', handleResize);
-        document.addEventListener('fullscreenchange', () => {
-            fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
-        });
+            requestAnimationFrame(gameLoop);
+        }
         
         // Initialize the game
-        createStars();
-        initJoystick();
-        openingCutscene.style.display = 'flex'; // Show opening cutscene first
-        gameLoop();
+        function initGame() {
+            // Adjust for mobile
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                // Slightly slower obstacles for mobile
+                obstacleSpeed = 2.5;
+                // Larger hitbox for player
+                playerWidth = 50;
+                playerHeight = 50;
+                player.style.width = playerWidth + 'px';
+                player.style.height = playerHeight + 'px';
+            }
+            
+            createStars();
+            setupMobileControls();
+            openingCutscene.style.display = 'flex';
+            
+            // Event listeners
+            document.addEventListener('keydown', (e) => {
+                keysPressed[e.key] = true;
+                
+                // Pause game with P key
+                if (e.key === 'p' || e.key === 'P') {
+                    togglePause();
+                }
+                
+                if (e.key === 'r' && !gameRunning) {
+                    resetGame();
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keysPressed[e.key] = false;
+            });
+            
+            // Prevent touch scroll
+            document.addEventListener('touchmove', function(e) {
+                if (gameRunning) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            restartLevelBtn.addEventListener('click', restartLevel);
+            restartChapterBtn.addEventListener('click', restartChapter);
+            menuBtn.addEventListener('click', () => {
+                window.location.href = 'menu.html';
+            });
+            nextLevelBtn.addEventListener('click', nextLevel);
+            menuBtn2.addEventListener('click', () => {
+                window.location.href = 'menu.html';
+            });
+            startGameBtn.addEventListener('click', startGame);
+            
+            // Pause menu event listeners
+            pauseBtn.addEventListener('click', togglePause);
+            resumeBtn.addEventListener('click', togglePause);
+            restartLevelPauseBtn.addEventListener('click', () => {
+                restartLevel();
+                pauseMenu.style.display = 'none';
+            });
+            menuPauseBtn.addEventListener('click', () => {
+                window.location.href = 'menu.html';
+            });
+            
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            window.addEventListener('resize', handleResize);
+            document.addEventListener('fullscreenchange', () => {
+                fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+            });
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        // Start the game when the page loads
+        window.onload = initGame;
     </script>
 </body>
 </html>
