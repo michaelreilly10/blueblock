@@ -478,7 +478,7 @@
             }
         });
 
-        // Close modal with Escape key
+        // Keypress event listener
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeControls();
@@ -487,6 +487,11 @@
             // Play fart sound when F key is pressed
             if (event.key.toLowerCase() === 'f') {
                 playFartSound();
+            }
+            
+            // Redirect to secret.html when S key is pressed
+            if (event.key.toLowerCase() === 's') {
+                window.location.href = 'secret.html';
             }
         });
 
