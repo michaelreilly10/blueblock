@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spinner</title>
+  <style>
+    body {
+      background-color: #000;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+      touch-action: manipulation;
+    }
+    #stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    .game-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .content-wrapper {
+      display: flex;
+      position: relative;
+    }
+    canvas {
+      background-color: rgba(34, 34, 34, 0.8);
+      border: 2px solid #fff;
+      display: none;
+      box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+    }
+    #startScreen, #gameOverScreen, #puzzleCompleteScreen {
+      text-align: center;
+      padding: 20px;
+      background-color: rgba(51, 51, 51, 0.9);
+      border-radius: 10px;
+      max-width: 400px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+    }
+    h1 {
+      color: #ff5555;
+      margin-top: 0;
+      text-shadow: 0 0 10px rgba(255, 85, 85, 0.7);
+    }
+    button {
+      background-color: #ff5555;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+      box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
+    }
+    button:hover {
+      background-color: #ff3333;
+      transform: scale(1.05);
+    }
+    #scoreDisplay, #puzzleInfo {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      color: white;
+      text-shadow: 0 0 5px #00aaff;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+      display: none;
+    }
+    #puzzleInfo {
+      font-size: 18px;
+      text-align: center;
+    }
+    #mobileControls {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      display: none;
+    }
+    #shootButton {
+      background-color: rgba(0, 150, 255, 0.7);
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 50px;
+      box-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
+    }
+    #shapeControls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-left: 20px;
+    }
+    .shape-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 5px;
+      background-color: rgba(68, 68, 68, 0.8);
+      border: 2px solid #666;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      transition: all 0.3s;
+    }
+    .shape-btn.active {
+      border-color: #00aaff;
+      background-color: rgba(0, 102, 170, 0.8);
+      box-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
+    }
+    .menu-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(0, 102, 170, 0.7);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 10;
+      box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+    }
+    #gameOverScreen button, #puzzleCompleteScreen button {
+      margin: 5px;
+    }
+    .puzzle-stick {
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="stars"></div>
+
+  <button id="backButton" class="menu-btn" style="display: none;">Back</button>
+
+  <div class="game-container">
+    <div id="startScreen">
+      <h1>Stick Shooter</h1>
+      <p>Tap/click when the orbiting stick is in position!</p>
+      <p>Avoid hitting existing sticks.</p>
+      <button id="startButton">Start Game</button>
+      <button id="puzzleButton">Puzzle Mode</button>
+      <button id="mainMenuButtonFromStart">Main Menu</button>
+    </div>
+
+    <div id="gameOverScreen" style="display: none;">
+      <h1>Game Over!</h1>
+      <p id="finalScore">Your score: 0</p>
+      <button id="restartButton">Play Again</button>
+      <button id="mainMenuButton">Main Menu</button>
+    </div>
+
+    <div id="puzzleCompleteScreen" style="display: none;">
+      <h1>Puzzle Complete!</h1>
+      <p id="puzzleCompleteText">Level 1 Complete!</p>
+      <button id="nextPuzzleButton">Next Puzzle</button>
+      <button id="puzzleMenuButton">Main Menu</button>
+    </div>
+
+    <div class="content-wrapper">
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+      <div id="shapeControls" style="display: none;">
+        <div class="shape-btn active" data-shape="circle">○</div>
+        <div class="shape-btn" data-shape="triangle">△</div>
+        <div class="shape-btn" data-shape="square">□</div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="scoreDisplay">Score: 0</div>
+  
+  <div id="puzzleInfo" style="display: none;">
+    <div>Level: <span id="puzzleLevel">1</span></div>
+    <div>Sticks Left: <span id="sticksLeft">0</span></div>
+    <div>Misses: <span id="missesLeft">0</span>/3</div>
+  </div>
+  
+  <div id="mobileControls">
+    <button id="shootButton">SHOOT</button>
+  </div>
+
+  <script>
+    // Starfield background
+    function createStarfield() {
+      const stars = document.getElementById('stars');
+      const count = 200;
+      let html = '';
+      
+      for(let i = 0; i < count; i++) {
+        const size = Math.random() * 3;
+        const speed = size * 1000;
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const delay = Math.random() * 5;
+        
+        html += `<div class="star" style="
+          width: ${size}px;
+          height: ${size}px;
+          top: ${y}%;
+          left: ${x}%;
+          background: hsl(${Math.random() * 60 + 200}, 100%, ${Math.random() * 30 + 70}%);
+          box-shadow: 0 0 ${size * 3}px white;
+          animation: twinkle ${speed}ms ${delay}s infinite;
+        "></div>`;
+      }
+      
+      stars.innerHTML = html;
+      
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 1; }
+        }
+        .star {
+          position: absolute;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    createStarfield();
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const startScreen = document.getElementById("startScreen");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const puzzleCompleteScreen = document.getElementById("puzzleCompleteScreen");
+    const startButton = document.getElementById("startButton");
+    const puzzleButton = document.getElementById("puzzleButton");
+    const restartButton = document.getElementById("restartButton");
+    const mainMenuButton = document.getElementById("mainMenuButton");
+    const mainMenuButtonFromStart = document.getElementById("mainMenuButtonFromStart");
+    const nextPuzzleButton = document.getElementById("nextPuzzleButton");
+    const puzzleMenuButton = document.getElementById("puzzleMenuButton");
+    const backButton = document.getElementById("backButton");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const puzzleInfo = document.getElementById("puzzleInfo");
+    const puzzleLevelDisplay = document.getElementById("puzzleLevel");
+    const sticksLeftDisplay = document.getElementById("sticksLeft");
+    const missesLeftDisplay = document.getElementById("missesLeft");
+    const finalScoreDisplay = document.getElementById("finalScore");
+    const puzzleCompleteText = document.getElementById("puzzleCompleteText");
+    const mobileControls = document.getElementById("mobileControls");
+    const shootButton = document.getElementById("shootButton");
+    const shapeControls = document.getElementById("shapeControls");
+    const shapeButtons = document.querySelectorAll(".shape-btn");
+
+    // Game variables
+    let circle = { 
+      x: 200, 
+      y: 200, 
+      radius: 40, 
+      segments: 12,
+      currentShape: "circle"
+    };
+    let centerSticks = [];
+    let canShoot = true;
+    let score = 0;
+    let gameRunning = false;
+    let orbitAngle = 0;
+    let orbitSpeed = 0.03;
+    let orbitRadius = 150;
+    let orbitStickLength = 80;
+    let isMobile = false;
+    let isPuzzleMode = false;
+    
+    // Puzzle Mode variables
+    let currentPuzzle = 0;
+    let remainingSticks = [];
+    let misses = 0;
+    const puzzles = [
+      { // Level 1: Simple cross (4 sticks)
+        sticks: [0, Math.PI/2, Math.PI, 3*Math.PI/2],
+        tolerance: 0.15,
+        maxMisses: 3,
+        speed: 0.03
+      },
+      { // Level 2: Star (8 sticks)
+        sticks: [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4],
+        tolerance: 0.1,
+        maxMisses: 2,
+        speed: 0.04
+      },
+      { // Level 3: Spiral pattern
+        sticks: [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5],
+        tolerance: 0.08,
+        maxMisses: 2,
+        speed: 0.05
+      }
+    ];
+
+    // Draw the center shape based on current selection
+    function drawCenterShape() {
+      ctx.save();
+      ctx.translate(circle.x, circle.y);
+      
+      switch(circle.currentShape) {
+        case "circle":
+          drawCircleShape();
+          break;
+        case "triangle":
+          drawTriangleShape();
+          break;
+        case "square":
+          drawSquareShape();
+          break;
+      }
+      
+      ctx.restore();
+    }
+
+    function drawCircleShape() {
+      const segmentAngle = (Math.PI * 2) / circle.segments;
+      
+      // Draw segments
+      for (let i = 0; i < circle.segments; i++) {
+        const startAngle = i * segmentAngle;
+        const endAngle = (i + 1) * segmentAngle;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, circle.radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? "#ff4444" : "#ff6666";
+        ctx.fill();
+      }
+      
+      // Draw outline
+      ctx.beginPath();
+      ctx.arc(0, 0, circle.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawTriangleShape() {
+      const size = circle.radius * 1.5;
+      const height = size * Math.sqrt(3)/2;
+      
+      // Draw segments (3 sides)
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        
+        const angle1 = i * (Math.PI * 2 / 3) - Math.PI/2;
+        const angle2 = (i + 1) * (Math.PI * 2 / 3) - Math.PI/2;
+        
+        ctx.lineTo(Math.cos(angle1) * size, Math.sin(angle1) * height);
+        ctx.lineTo(Math.cos(angle2) * size, Math.sin(angle2) * height);
+        ctx.closePath();
+        
+        ctx.fillStyle = i % 2 === 0 ? "#ff4444" : "#ff6666";
+        ctx.fill();
+      }
+      
+      // Draw outline
+      ctx.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const angle = i * (Math.PI * 2 / 3) - Math.PI/2;
+        const x = Math.cos(angle) * size;
+        const y = Math.sin(angle) * height;
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawSquareShape() {
+      const size = circle.radius * 1.2;
+      
+      // Draw segments (4 sides)
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        
+        const angle1 = i * (Math.PI * 2 / 4) - Math.PI/4;
+        const angle2 = (i + 1) * (Math.PI * 2 / 4) - Math.PI/4;
+        
+        ctx.lineTo(Math.cos(angle1) * size, Math.sin(angle1) * size);
+        ctx.lineTo(Math.cos(angle2) * size, Math.sin(angle2) * size);
+        ctx.closePath();
+        
+        ctx.fillStyle = i % 2 === 0 ? "#ff4444" : "#ff6666";
+        ctx.fill();
+      }
+      
+      // Draw outline
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const angle = i * (Math.PI * 2 / 4) - Math.PI/4;
+        const x = Math.cos(angle) * size;
+        const y = Math.sin(angle) * size;
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Draw the orbiting stick with glow effect
+    function drawOrbitStick() {
+      const orbitX = circle.x + Math.cos(orbitAngle) * orbitRadius;
+      const orbitY = circle.y + Math.sin(orbitAngle) * orbitRadius;
+      const angleToCenter = Math.atan2(circle.y - orbitY, circle.x - orbitX);
+      
+      ctx.save();
+      ctx.translate(orbitX, orbitY);
+      ctx.rotate(angleToCenter);
+      
+      // Glow effect
+      ctx.shadowColor = "#00aaff";
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      // Draw stick
+      ctx.beginPath();
+      ctx.rect(0, -2, orbitStickLength, 4);
+      ctx.fillStyle = "#00aaff";
+      ctx.fill();
+      ctx.closePath();
+      
+      ctx.restore();
+    }
+
+    // Draw stuck sticks with blue glow
+    function drawStick(stick) {
+      ctx.save();
+      ctx.translate(circle.x, circle.y);
+      ctx.rotate(stick.angle);
+      
+      // Glow effect
+      if (!stick.isPermanent) {
+        ctx.shadowColor = "#00aaff";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      
+      // Draw stick
+      ctx.beginPath();
+      ctx.rect(circle.radius, -3, 80, 6);
+      
+      if (stick.isPermanent) {
+        ctx.fillStyle = "rgba(0, 170, 255, 0.5)";
+      } else {
+        ctx.fillStyle = score > 20 ? `hsl(${(stick.angle * 180/Math.PI) % 360}, 100%, 50%)` : "#00aaff";
+      }
+      
+      ctx.fill();
+      ctx.closePath();
+      
+      ctx.restore();
+    }
+
+    // Draw target markers for puzzle mode
+    function drawTargetMarkers() {
+      if (!isPuzzleMode) return;
+      
+      ctx.save();
+      ctx.translate(circle.x, circle.y);
+      
+      for (const angle of remainingSticks) {
+        // Draw target indicator
+        ctx.beginPath();
+        ctx.arc(
+          Math.cos(angle) * (circle.radius + 25),
+          Math.sin(angle) * (circle.radius + 25),
+          5, 0, Math.PI * 2
+        );
+        ctx.fillStyle = "gold";
+        ctx.fill();
+        
+        // Draw faint line to show exact angle
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(
+          Math.cos(angle) * (circle.radius + orbitRadius),
+          Math.sin(angle) * (circle.radius + orbitRadius)
+        );
+        ctx.strokeStyle = "rgba(255, 215, 0, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+    }
+
+    function shootStick() {
+      if (!canShoot || !gameRunning) return;
+
+      const shotAngle = Math.atan2(
+        Math.sin(orbitAngle) * orbitRadius, 
+        Math.cos(orbitAngle) * orbitRadius
+      );
+
+      if (isPuzzleMode) {
+        // Puzzle mode shooting logic
+        let success = false;
+        for (let i = 0; i < remainingSticks.length; i++) {
+          const targetAngle = remainingSticks[i];
+          const angleDiff = Math.abs(shotAngle - targetAngle);
+          const minDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+
+          if (minDiff <= puzzles[currentPuzzle].tolerance) {
+            // Success! Remove from remaining sticks
+            remainingSticks.splice(i, 1);
+            centerSticks.push({ angle: targetAngle });
+            success = true;
+            score++;
+            updateScore();
+            updatePuzzleUI();
+            break;
+          }
+        }
+
+        if (!success) {
+          misses++;
+          updatePuzzleUI();
+          if (misses >= puzzles[currentPuzzle].maxMisses) {
+            gameOver();
+            return;
+          }
+        }
+
+        // Check if puzzle is complete
+        if (remainingSticks.length === 0) {
+          puzzleComplete();
+        }
+      } else {
+        // Classic mode shooting logic
+        for (let stick of centerSticks) {
+          let angleDiff = Math.abs(stick.angle - shotAngle);
+          angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+          
+          if (angleDiff < 0.2) {
+            gameOver();
+            return;
+          }
+        }
+        
+        centerSticks.push({ angle: shotAngle });
+        score++;
+        updateScore();
+        
+        // Slightly increase difficulty
+        orbitSpeed += 0.001;
+      }
+
+      canShoot = false;
+      setTimeout(() => { canShoot = true }, 300);
+    }
+
+    function updateScore() {
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    function updatePuzzleUI() {
+      puzzleLevelDisplay.textContent = currentPuzzle + 1;
+      sticksLeftDisplay.textContent = remainingSticks.length;
+      missesLeftDisplay.textContent = `${misses}/${puzzles[currentPuzzle].maxMisses}`;
+    }
+
+    function goToMenu() {
+      window.location.href = "menu.html";
+    }
+
+    function goToStartScreen() {
+      resetGame();
+      startScreen.style.display = "block";
+      gameOverScreen.style.display = "none";
+      puzzleCompleteScreen.style.display = "none";
+      canvas.style.display = "none";
+      scoreDisplay.style.display = "none";
+      puzzleInfo.style.display = "none";
+      mobileControls.style.display = "none";
+      shapeControls.style.display = "none";
+      backButton.style.display = "none";
+      gameRunning = false;
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      canvas.style.display = "none";
+      scoreDisplay.style.display = "none";
+      puzzleInfo.style.display = "none";
+      mobileControls.style.display = "none";
+      shapeControls.style.display = "none";
+      backButton.style.display = "none";
+      
+      if (isPuzzleMode) {
+        puzzleCompleteScreen.style.display = "none";
+        gameOverScreen.style.display = "block";
+        finalScoreDisplay.textContent = `Puzzle ${currentPuzzle + 1} Failed`;
+      } else {
+        gameOverScreen.style.display = "block";
+        finalScoreDisplay.textContent = `Your score: ${score}`;
+      }
+    }
+
+    function puzzleComplete() {
+      gameRunning = false;
+      canvas.style.display = "none";
+      puzzleInfo.style.display = "none";
+      backButton.style.display = "none";
+      puzzleCompleteScreen.style.display = "block";
+      puzzleCompleteText.textContent = `Puzzle ${currentPuzzle + 1} Complete!`;
+    }
+
+    function resetGame() {
+      centerSticks = [];
+      score = 0;
+      orbitAngle = 0;
+      orbitSpeed = 0.03;
+      updateScore();
+    }
+
+    function loadPuzzle(level) {
+      resetGame();
+      const puzzle = puzzles[level];
+      remainingSticks = [...puzzle.sticks];
+      misses = 0;
+      orbitSpeed = puzzle.speed;
+      
+      // Draw existing sticks (for visual reference)
+      for (const angle of puzzle.sticks) {
+        centerSticks.push({ angle, isPermanent: true });
+      }
+      
+      updatePuzzleUI();
+    }
+
+    function startGame() {
+      isMobile = checkMobile();
+      isPuzzleMode = false;
+      resetGame();
+      startScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+      puzzleCompleteScreen.style.display = "none";
+      canvas.style.display = "block";
+      scoreDisplay.style.display = "block";
+      puzzleInfo.style.display = "none";
+      shapeControls.style.display = "flex";
+      backButton.style.display = "block";
+      mobileControls.style.display = isMobile ? "block" : "none";
+      gameRunning = true;
+      
+      if (isMobile) {
+        const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 400);
+        canvas.width = size;
+        canvas.height = size;
+        circle.x = size / 2;
+        circle.y = size / 2;
+        orbitRadius = size * 0.375;
+      }
+    }
+
+    function startPuzzleMode() {
+      isMobile = checkMobile();
+      isPuzzleMode = true;
+      currentPuzzle = 0;
+      startScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+      puzzleCompleteScreen.style.display = "none";
+      canvas.style.display = "block";
+      scoreDisplay.style.display = "none";
+      puzzleInfo.style.display = "block";
+      shapeControls.style.display = "flex";
+      backButton.style.display = "block";
+      mobileControls.style.display = isMobile ? "block" : "none";
+      gameRunning = true;
+      
+      if (isMobile) {
+        const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 400);
+        canvas.width = size;
+        canvas.height = size;
+        circle.x = size / 2;
+        circle.y = size / 2;
+        orbitRadius = size * 0.375;
+      }
+      
+      loadPuzzle(currentPuzzle);
+    }
+
+    function nextPuzzle() {
+      currentPuzzle++;
+      if (currentPuzzle < puzzles.length) {
+        puzzleCompleteScreen.style.display = "none";
+        canvas.style.display = "block";
+        puzzleInfo.style.display = "block";
+        backButton.style.display = "block";
+        gameRunning = true;
+        loadPuzzle(currentPuzzle);
+      } else {
+        goToStartScreen();
+      }
+    }
+
+    function update() {
+      if (gameRunning) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        orbitAngle += orbitSpeed;
+        
+        if (orbitAngle > Math.PI * 2) {
+          orbitAngle -= Math.PI * 2;
+        }
+        
+        drawCenterShape();
+        drawOrbitStick();
+        for (let stick of centerSticks) {
+          drawStick(stick);
+        }
+        
+        if (isPuzzleMode) {
+          drawTargetMarkers();
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    // Check if mobile device
+    function checkMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Event listeners
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") shootStick();
+    });
+
+    canvas.addEventListener("click", () => {
+      if (!isMobile) shootStick();
+    });
+
+    shootButton.addEventListener("click", shootStick);
+    startButton.addEventListener("click", startGame);
+    puzzleButton.addEventListener("click", startPuzzleMode);
+    restartButton.addEventListener("click", () => {
+      if (isPuzzleMode) startPuzzleMode();
+      else startGame();
+    });
+    backButton.addEventListener("click", goToStartScreen);
+    mainMenuButton.addEventListener("click", goToMenu);
+    mainMenuButtonFromStart.addEventListener("click", goToMenu);
+    nextPuzzleButton.addEventListener("click", nextPuzzle);
+    puzzleMenuButton.addEventListener("click", goToMenu);
+
+    // Shape selection buttons
+    shapeButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        shapeButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        circle.currentShape = btn.dataset.shape;
+      });
+    });
+
+    // Handle window resize
+    window.addEventListener("resize", () => {
+      if (isMobile && gameRunning) {
+        const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 400);
+        canvas.width = size;
+        canvas.height = size;
+        circle.x = size / 2;
+        circle.y = size / 2;
+        orbitRadius = size * 0.375;
+      }
+    });
+
+    update();
+  </script>
+</body>
+</html>

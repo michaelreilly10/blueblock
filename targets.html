@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ball Shooting Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            margin: 0 auto;
+            background-color: #e6f7ff;
+            border: 2px solid #333;
+            overflow: hidden;
+            background-image: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+        }
+        
+        #ball {
+            position: absolute;
+            left: 100px;
+            bottom: 100px;
+            width: 30px;
+            height: 30px;
+            background-color: #FF5722;
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        .target {
+            position: absolute;
+            border-radius: 50%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="white" stroke="black"/><circle cx="50" cy="50" r="30" fill="red" stroke="black"/><circle cx="50" cy="50" r="20" fill="white" stroke="black"/><circle cx="50" cy="50" r="10" fill="red" stroke="black"/></svg>');
+            background-size: contain;
+            z-index: 2;
+            transition: transform 0.2s;
+        }
+        
+        .target-broken {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20,20 L80,80 M80,20 L20,80" stroke="black" stroke-width="8"/></svg>');
+            opacity: 0.7;
+        }
+        
+        .obstacle {
+            position: absolute;
+            background-color: #795548;
+            border-radius: 5px;
+            z-index: 3;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        #controls {
+            margin: 20px auto;
+            width: 800px;
+            padding: 15px;
+            background-color: #d9edf7;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        #power-meter {
+            width: 200px;
+            height: 20px;
+            background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
+            margin: 5px auto;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #power-level {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background-color: rgba(255,255,255,0.3);
+        }
+        
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #menu-button {
+            background-color: #2196F3;
+        }
+        
+        #menu-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        #score-display {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #333;
+        }
+        
+        #level-display {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #333;
+        }
+        
+        #flying-ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #FF5722;
+            border-radius: 50%;
+            display: none;
+            z-index: 5;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        #ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #8B4513;
+            z-index: 1;
+        }
+        
+        #angle-guide {
+            position: absolute;
+            left: 130px;
+            bottom: 115px;
+            width: 100px;
+            height: 8px;
+            background-color: rgba(0,0,0,0.5);
+            transform-origin: left center;
+            z-index: 4;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        #angle-guide::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-left: 15px solid rgba(0,0,0,0.5);
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+        
+        #angle-value-display {
+            position: absolute;
+            left: 240px;
+            bottom: 110px;
+            background-color: white;
+            padding: 5px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 6;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .instructions {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        @keyframes targetBreak {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0.5); opacity: 0; }
+        }
+        
+        .target-breaking {
+            animation: targetBreak 0.5s forwards;
+        }
+        
+        @keyframes scorePop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        
+        .score-points {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            z-index: 10;
+            animation: scorePop 1s forwards;
+            pointer-events: none;
+        }
+        
+        .miss-penalty {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #F44336;
+            z-index: 10;
+            animation: scorePop 1s forwards;
+            pointer-events: none;
+        }
+        
+        #level-complete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 20;
+            display: none;
+            text-align: center;
+        }
+        
+        #level-complete h2 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        
+        /* New styles for challenge mode */
+        #game-modes {
+            margin: 15px auto;
+            width: 800px;
+            text-align: center;
+        }
+        
+        #timer-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #F44336;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        #challenge-score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .mode-button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .mode-button:hover {
+            background-color: #0b7dda;
+            transform: scale(1.05);
+        }
+        
+        .mode-button.active {
+            background-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+        }
+        
+        @media (max-width: 800px) {
+            #game-container {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 2/1;
+            }
+            
+            #controls, #game-modes {
+                width: 100%;
+            }
+            
+            .target, .obstacle {
+                transform: scale(0.8);
+            }
+            
+            #ball, #flying-ball {
+                width: 20px;
+                height: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Ball Shooting Game</h1>
+    <div id="score-display">Score: 0</div>
+    <div id="level-display">Level: 1</div>
+    <div id="timer-display">Time: 30s</div>
+    <div id="challenge-score">Targets: 0</div>
+    <div class="instructions">
+        Drag the arrow to set angle | Hold SPACE to charge power | Release to shoot
+    </div>
+    
+    <div id="game-modes">
+        <button id="campaign-mode" class="mode-button active">Campaign Mode</button>
+        <button id="challenge-mode" class="mode-button">30-Second Challenge</button>
+    </div>
+    
+    <div id="game-container">
+        <div id="ground"></div>
+        <div id="ball"></div>
+        <div id="flying-ball"></div>
+        <div id="angle-guide"></div>
+        <div id="angle-value-display">45°</div>
+        
+        <div id="level-complete">
+            <h2>Level Complete!</h2>
+            <p id="level-score">You scored 0 points this level.</p>
+            <button id="next-level">Next Level</button>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <div id="power-meter">
+            <div id="power-level"></div>
+        </div>
+        <div>
+            <button id="reset">Reset Game</button>
+            <button id="menu-button">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // Game elements
+        const ball = document.getElementById('ball');
+        const flyingBall = document.getElementById('flying-ball');
+        const gameContainer = document.getElementById('game-container');
+        const angleGuide = document.getElementById('angle-guide');
+        const angleValueDisplay = document.getElementById('angle-value-display');
+        
+        // Controls
+        const powerMeter = document.getElementById('power-level');
+        const resetBtn = document.getElementById('reset');
+        const menuBtn = document.getElementById('menu-button');
+        const scoreDisplay = document.getElementById('score-display');
+        const levelDisplay = document.getElementById('level-display');
+        const levelCompletePanel = document.getElementById('level-complete');
+        const levelScoreDisplay = document.getElementById('level-score');
+        const nextLevelBtn = document.getElementById('next-level');
+        const campaignModeBtn = document.getElementById('campaign-mode');
+        const challengeModeBtn = document.getElementById('challenge-mode');
+        const timerDisplay = document.getElementById('timer-display');
+        const challengeScoreDisplay = document.getElementById('challenge-score');
+        
+        // Game state
+        let score = 0;
+        let level = 1;
+        let levelScore = 0;
+        let targets = [];
+        let obstacles = [];
+        let power = 0;
+        let powerInterval;
+        let isCharging = false;
+        let isBallFlying = false;
+        let currentAngle = 45;
+        let isDragging = false;
+        let powerDirection = 1;
+        let targetsHit = 0;
+        let targetsRequired = 1;
+        let shotsTaken = 0;
+        let hits = 0;
+        let misses = 0;
+        let movingTargets = [];
+        let animationFrameId = null;
+        let gameMode = 'campaign';
+        let challengeTimeLeft = 30;
+        let challengeTimer;
+        let challengeTargetsHit = 0;
+        let targetSpawnInterval;
+        
+        // Ball position constants
+        const BALL_START_X = 100;
+        const BALL_START_Y = 100;
+        const BALL_RADIUS = 15;
+        const CONTAINER_WIDTH = 800;
+        const CONTAINER_HEIGHT = 400;
+        
+        // Level configurations
+        const levels = [
+            { // Level 1 - Basic single target (no obstacles)
+                distance: 550,
+                targetCount: 1,
+                targetPositions: [{ right: 150, bottom: 100 }],
+                targetSizes: [60],
+                movingTargets: [],
+                obstacles: [],
+                description: "Hit the single target"
+            },
+            { // Level 2 - Two targets (no obstacles)
+                distance: 600,
+                targetCount: 2,
+                targetPositions: [
+                    { right: 200, bottom: 100 },
+                    { right: 150, bottom: 150 }
+                ],
+                targetSizes: [60, 50],
+                movingTargets: [],
+                obstacles: [],
+                description: "Hit both targets"
+            },
+            { // Level 3 - Three targets with moving target (no obstacles)
+                distance: 650,
+                targetCount: 3,
+                targetPositions: [
+                    { right: 250, bottom: 80 },
+                    { right: 200, bottom: 130 },
+                    { right: 150, bottom: 180 }
+                ],
+                targetSizes: [60, 50, 40],
+                movingTargets: [0], // First target moves
+                obstacles: [],
+                description: "Hit all three targets (one moves up/down)"
+            },
+            { // Level 4 - Two distant targets (no obstacles)
+                distance: 700,
+                targetCount: 2,
+                targetPositions: [
+                    { right: 300, bottom: 50 },
+                    { right: 250, bottom: 150 }
+                ],
+                targetSizes: [50, 40],
+                movingTargets: [1], // Second target moves
+                obstacles: [],
+                description: "Hit both distant targets"
+            },
+            { // Level 5 - Three distant targets with moving targets (no obstacles)
+                distance: 750,
+                targetCount: 3,
+                targetPositions: [
+                    { right: 350, bottom: 50 },
+                    { right: 300, bottom: 120 },
+                    { right: 250, bottom: 190 }
+                ],
+                targetSizes: [50, 40, 30],
+                movingTargets: [0, 2], // First and third targets move
+                obstacles: [],
+                description: "Hit all three moving targets"
+            },
+            { // Level 6 - More targets (no obstacles)
+                distance: 700,
+                targetCount: 2,
+                targetPositions: [
+                    { right: 400, bottom: 80 },
+                    { right: 350, bottom: 180 }
+                ],
+                targetSizes: [40, 50],
+                movingTargets: [0, 1], // Both targets move
+                obstacles: [],
+                description: "Hit both moving targets"
+            },
+            { // Level 7 - First level with vertical obstacles only
+                distance: 650,
+                targetCount: 3,
+                targetPositions: [
+                    { right: 300, bottom: 50 },
+                    { right: 350, bottom: 150 },
+                    { right: 250, bottom: 200 }
+                ],
+                targetSizes: [30, 30, 30],
+                movingTargets: [0, 1, 2], // All targets move
+                obstacles: [
+                    { right: 500, bottom: 50, width: 30, height: 100 }  // Vertical
+                ],
+                description: "Hit all three small targets between vertical walls"
+            },
+            { // Level 8 - Vertical obstacles only
+                distance: 700,
+                targetCount: 2,
+                targetPositions: [
+                    { right: 450, bottom: 50 },
+                    { right: 400, bottom: 200 }
+                ],
+                targetSizes: [40, 40],
+                movingTargets: [1], // Second target moves
+                obstacles: [
+                    { right: 350, bottom: 0, width: 30, height: 150 }, // Vertical
+                    { right: 450, bottom: 0, width: 30, height: 150 }, // Vertical
+                ],
+                description: "Navigate between vertical walls to hit targets"
+            },
+            { // Level 9 - Vertical obstacles only
+                distance: 750,
+                targetCount: 3,
+                targetPositions: [
+                    { right: 500, bottom: 50 },
+                    { right: 450, bottom: 150 },
+                    { right: 400, bottom: 250 }
+                ],
+                targetSizes: [30, 25, 20],
+                movingTargets: [0, 1, 2], // All targets move
+                obstacles: [
+                    { right: 350, bottom: 0, width: 30, height: 300 }, // Vertical
+                    { right: 550, bottom: 100, width: 30, height: 200 } // Vertical
+                ],
+                description: "Precision shooting between tall vertical walls"
+            },
+            { // Level 10 - Vertical obstacles only
+                distance: 800,
+                targetCount: 4,
+                targetPositions: [
+                    { right: 500, bottom: 50 },
+                    { right: 450, bottom: 150 },
+                    { right: 400, bottom: 200 },
+                    { right: 350, bottom: 100 }
+                ],
+                targetSizes: [35, 30, 25, 20],
+                movingTargets: [0, 1, 2, 3], // All targets move
+                obstacles: [
+                    { right: 300, bottom: 0, width: 30, height: 300 }, // Vertical
+                    { right: 550, bottom: 100, width: 30, height: 200 }, // Vertical
+                    { right: 600, bottom: 0, width: 30, height: 150 } // Vertical
+                ],
+                description: "Ultimate challenge with vertical obstacle course"
+            }
+        ];
+        
+        // Initialize game
+        function initGame() {
+            score = 0;
+            level = 1;
+            shotsTaken = 0;
+            hits = 0;
+            misses = 0;
+            updateScore();
+            updateLevelDisplay();
+            setupLevel(level);
+        }
+        
+        // Set up a specific level
+        function setupLevel(levelNum) {
+            const levelConfig = levels[levelNum - 1];
+            if (!levelConfig) {
+                // Game completed
+                levelCompletePanel.innerHTML = '<h2>Game Completed!</h2><p>Final Score: ' + score + '</p><p>Accuracy: ' + Math.round((hits/shotsTaken)*100) + '%</p><button id="restart-game">Play Again</button>';
+                levelCompletePanel.style.display = 'block';
+                document.getElementById('restart-game').addEventListener('click', initGame);
+                return;
+            }
+            
+            levelScore = 0;
+            targetsHit = 0;
+            targetsRequired = levelConfig.targetCount;
+            
+            // Clear existing targets and obstacles
+            targets.forEach(target => {
+                if (target.parentNode) {
+                    gameContainer.removeChild(target);
+                }
+            });
+            targets = [];
+            
+            obstacles.forEach(obstacle => {
+                if (obstacle.parentNode) {
+                    gameContainer.removeChild(obstacle);
+                }
+            });
+            obstacles = [];
+            
+            movingTargets = [];
+            
+            // Create new targets
+            for (let i = 0; i < levelConfig.targetCount; i++) {
+                const target = document.createElement('div');
+                target.className = 'target';
+                target.style.right = levelConfig.targetPositions[i].right + 'px';
+                target.style.bottom = levelConfig.targetPositions[i].bottom + 'px';
+                target.style.width = levelConfig.targetSizes[i] + 'px';
+                target.style.height = levelConfig.targetSizes[i] + 'px';
+                target.dataset.hit = 'false';
+                target.dataset.index = i;
+                target.dataset.direction = 'down';
+                gameContainer.appendChild(target);
+                targets.push(target);
+                
+                // Set up moving targets
+                if (levelConfig.movingTargets.includes(i)) {
+                    movingTargets.push(i);
+                }
+            }
+            
+            // Create obstacles (only for levels 7-10)
+            for (let i = 0; i < levelConfig.obstacles.length; i++) {
+                const obstacle = document.createElement('div');
+                obstacle.className = 'obstacle';
+                obstacle.style.right = levelConfig.obstacles[i].right + 'px';
+                obstacle.style.bottom = levelConfig.obstacles[i].bottom + 'px';
+                obstacle.style.width = levelConfig.obstacles[i].width + 'px';
+                obstacle.style.height = levelConfig.obstacles[i].height + 'px';
+                gameContainer.appendChild(obstacle);
+                obstacles.push(obstacle);
+            }
+            
+            resetBallPosition();
+            ball.style.display = 'block';
+            flyingBall.style.display = 'none';
+            isBallFlying = false;
+            power = 0;
+            powerMeter.style.width = '0%';
+            currentAngle = 45;
+            updateAngleGuide(currentAngle);
+            
+            // Start moving targets animation
+            if (movingTargets.length > 0) {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                animateMovingTargets();
+            }
+            
+            // Update level description in instructions
+            document.querySelector('.instructions').textContent = 
+                `Level ${levelNum}: ${levelConfig.description} | Drag the arrow to set angle | Hold SPACE to charge power | Release to shoot`;
+        }
+        
+        // Animate moving targets
+        function animateMovingTargets() {
+            const moveSpeed = 1 + (level * 0.2); // Faster movement in higher levels
+            
+            for (let i = 0; i < movingTargets.length; i++) {
+                const targetIndex = movingTargets[i];
+                const target = targets[targetIndex];
+                if (target.dataset.hit === 'true') continue;
+                
+                const currentBottom = parseInt(target.style.bottom);
+                const direction = target.dataset.direction;
+                
+                // Move target up or down
+                if (direction === 'down') {
+                    target.style.bottom = (currentBottom - moveSpeed) + 'px';
+                    if (currentBottom - moveSpeed <= 20) {
+                        target.dataset.direction = 'up';
+                    }
+                } else {
+                    target.style.bottom = (currentBottom + moveSpeed) + 'px';
+                    const containerHeight = CONTAINER_HEIGHT - parseInt(target.style.height) - 50; // Subtract ground height
+                    if (currentBottom + moveSpeed >= containerHeight) {
+                        target.dataset.direction = 'down';
+                    }
+                }
+            }
+            
+            animationFrameId = requestAnimationFrame(animateMovingTargets);
+        }
+        
+        // Update score display
+        function updateScore() {
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+        
+        // Update level display
+        function updateLevelDisplay() {
+            levelDisplay.textContent = `Level: ${level}`;
+        }
+        
+        // Update angle guide
+        function updateAngleGuide(angle) {
+            angleGuide.style.transform = `rotate(${-angle}deg)`;
+            angleValueDisplay.textContent = `${angle}°`;
+            
+            // Position angle value at end of guide arrow
+            const radianAngle = angle * Math.PI / 180;
+            const guideLength = 100;
+            const x = 130 + guideLength * Math.cos(radianAngle);
+            const y = 115 + guideLength * Math.sin(radianAngle);
+            
+            angleValueDisplay.style.left = `${x - 15}px`;
+            angleValueDisplay.style.bottom = `${400 - (400 - y) + 5}px`;
+        }
+        
+        // Handle angle guide dragging
+        angleGuide.addEventListener('mousedown', startDrag);
+        angleGuide.addEventListener('touchstart', startDrag);
+        
+        document.addEventListener('mousemove', dragAngle);
+        document.addEventListener('touchmove', dragAngle);
+        
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+        
+        function startDrag(e) {
+            if (isBallFlying) return;
+            isDragging = true;
+            e.preventDefault();
+        }
+        
+        function dragAngle(e) {
+            if (!isDragging || isBallFlying) return;
+            
+            const containerRect = gameContainer.getBoundingClientRect();
+            let clientY, clientX;
+            
+            if (e.type === 'touchmove') {
+                clientY = e.touches[0].clientY;
+                clientX = e.touches[0].clientX;
+            } else {
+                clientY = e.clientY;
+                clientX = e.clientX;
+            }
+            
+            // Calculate angle based on mouse/touch position relative to ball center
+            const ballCenterX = containerRect.left + BALL_START_X + BALL_RADIUS;
+            const ballCenterY = containerRect.bottom - BALL_START_Y - BALL_RADIUS;
+            
+            const deltaX = clientX - ballCenterX;
+            const deltaY = ballCenterY - clientY; // Invert Y axis
+            
+            // Calculate angle in degrees (0-90)
+            let angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+            angle = Math.max(0, Math.min(90, angle)); // Clamp between 0-90
+            
+            currentAngle = Math.round(angle);
+            updateAngleGuide(currentAngle);
+        }
+        
+        function endDrag() {
+            isDragging = false;
+        }
+        
+        // Spacebar power control
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isBallFlying && !isCharging) {
+                e.preventDefault();
+                startCharging();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && isCharging) {
+                e.preventDefault();
+                stopCharging();
+                shootBall();
+            }
+        });
+        
+        // Touch power control
+        gameContainer.addEventListener('touchstart', (e) => {
+            if (!isBallFlying && !isCharging) {
+                e.preventDefault();
+                startCharging();
+            }
+        });
+        
+        gameContainer.addEventListener('touchend', (e) => {
+            if (isCharging) {
+                e.preventDefault();
+                stopCharging();
+                shootBall();
+            }
+        });
+        
+        function startCharging() {
+            isCharging = true;
+            power = 0;
+            powerMeter.style.width = '0%';
+            powerDirection = 1;
+            
+            powerInterval = setInterval(() => {
+                power += 2 * powerDirection;
+                if (power >= 100) {
+                    power = 100;
+                    powerDirection = -1;
+                } else if (power <= 0) {
+                    power = 0;
+                    powerDirection = 1;
+                }
+                powerMeter.style.width = `${power}%`;
+            }, 20);
+        }
+        
+        function stopCharging() {
+            if (!isCharging) return;
+            
+            clearInterval(powerInterval);
+            isCharging = false;
+        }
+        
+        // Shoot ball with precise collision detection
+        function shootBall() {
+            if (isBallFlying) return;
+            
+            shotsTaken++;
+            let hitTarget = false;
+            
+            const angle = currentAngle;
+            const powerValue = power;
+            
+            // Hide stationary ball, show flying ball
+            ball.style.display = 'none';
+            flyingBall.style.display = 'block';
+            flyingBall.style.left = `${BALL_START_X}px`;
+            flyingBall.style.bottom = `${BALL_START_Y}px`;
+            
+            isBallFlying = true;
+            angleGuide.style.display = 'none';
+            angleValueDisplay.style.display = 'none';
+            
+            // Physics variables
+            const gravity = 0.2;
+            const radianAngle = angle * Math.PI / 180;
+            let velocityX = Math.cos(radianAngle) * (powerValue / 5);
+            let velocityY = -Math.sin(radianAngle) * (powerValue / 5);
+            
+            // Get exact starting position (center of ball)
+            const containerRect = gameContainer.getBoundingClientRect();
+            let posX = BALL_START_X + BALL_RADIUS;
+            let posY = (CONTAINER_HEIGHT - BALL_START_Y) - BALL_RADIUS;
+            
+            // Animation loop
+            const ballFlyInterval = setInterval(() => {
+                // Update position
+                velocityY += gravity;
+                posX += velocityX;
+                posY += velocityY;
+                
+                // Update ball position
+                flyingBall.style.left = `${posX - BALL_RADIUS}px`;
+                flyingBall.style.bottom = `${CONTAINER_HEIGHT - posY - BALL_RADIUS}px`;
+                
+                // Check collision with each target
+                const ballCenter = { x: posX, y: posY };
+                
+                for (let i = 0; i < targets.length; i++) {
+                    const target = targets[i];
+                    
+                    if (target.dataset.hit === 'true') continue;
+                    
+                    const targetRect = target.getBoundingClientRect();
+                    const targetCenter = {
+                        x: (targetRect.left - containerRect.left) + targetRect.width/2,
+                        y: (targetRect.top - containerRect.top) + targetRect.height/2
+                    };
+                    const targetRadius = targetRect.width / 2;
+                    
+                    // Precise circle-to-circle collision detection
+                    const dx = ballCenter.x - targetCenter.x;
+                    const dy = ballCenter.y - targetCenter.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Check if ball touches target (ball radius + target radius)
+                    if (distance <= BALL_RADIUS + targetRadius) {
+                        hitTarget = true;
+                        target.dataset.hit = 'true';
+                        const pointsEarned = gameMode === 'challenge' ? 1 : (1 + Math.floor((10 - level) / 3));
+                        score += pointsEarned;
+                        hits++;
+                        
+                        if (gameMode === 'campaign') {
+                            levelScore += pointsEarned;
+                            targetsHit++;
+                            
+                            // Check if level is complete (only in campaign)
+                            if (targetsHit >= targetsRequired) {
+                                clearInterval(ballFlyInterval);
+                                setTimeout(completeLevel, 1000);
+                                return;
+                            }
+                        } else {
+                            challengeTargetsHit++;
+                            updateChallengeScore();
+                        }
+                        
+                        animateTargetBreak(target, pointsEarned);
+                    }
+                }
+                
+                // Check collision with obstacles (only for levels 7-10)
+                for (let i = 0; i < obstacles.length; i++) {
+                    const obstacle = obstacles[i];
+                    const obstacleRect = obstacle.getBoundingClientRect();
+                    const obstacleGameRect = {
+                        left: obstacleRect.left - containerRect.left,
+                        top: obstacleRect.top - containerRect.top,
+                        right: obstacleRect.right - containerRect.left,
+                        bottom: obstacleRect.bottom - containerRect.top,
+                        width: obstacleRect.width,
+                        height: obstacleRect.height
+                    };
+                    
+                    // Check if ball is inside obstacle bounds
+                    if (posX + BALL_RADIUS > obstacleGameRect.left &&
+                        posX - BALL_RADIUS < obstacleGameRect.right &&
+                        posY + BALL_RADIUS > obstacleGameRect.top &&
+                        posY - BALL_RADIUS < obstacleGameRect.bottom) {
+                        
+                        // Simple bounce effect
+                        velocityX *= -0.7;
+                        velocityY *= -0.7;
+                        
+                        // Move ball out of obstacle to prevent sticking
+                        if (posX < obstacleGameRect.left + BALL_RADIUS) {
+                            posX = obstacleGameRect.left - BALL_RADIUS;
+                        } else if (posX > obstacleGameRect.right - BALL_RADIUS) {
+                            posX = obstacleGameRect.right + BALL_RADIUS;
+                        }
+                        
+                        if (posY < obstacleGameRect.top + BALL_RADIUS) {
+                            posY = obstacleGameRect.top - BALL_RADIUS;
+                        } else if (posY > obstacleGameRect.bottom - BALL_RADIUS) {
+                            posY = obstacleGameRect.bottom + BALL_RADIUS;
+                        }
+                    }
+                }
+                
+                // Check if ball is out of bounds
+                if (posX > CONTAINER_WIDTH || posY > CONTAINER_HEIGHT || posX < 0) {
+                    clearInterval(ballFlyInterval);
+                    if (!hitTarget) {
+                        score -= 1; // -1 point per miss
+                        misses++;
+                        showMissPenalty();
+                    }
+                    setTimeout(resetBallPosition, 1000);
+                }
+            }, 16);
+        }
+
+        // Animate target breaking when hit
+        function animateTargetBreak(target, points) {
+            // Add breaking animation class
+            target.classList.add('target-breaking');
+            target.classList.add('target-broken');
+            
+            // Create and display score points
+            const scoreElement = document.createElement('div');
+            scoreElement.className = 'score-points';
+            scoreElement.textContent = `+${points}`;
+            
+            const targetRect = target.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+            
+            scoreElement.style.left = `${targetRect.left - containerRect.left + targetRect.width/2 - 10}px`;
+            scoreElement.style.top = `${targetRect.top - containerRect.top + targetRect.height/2 - 20}px`;
+            
+            gameContainer.appendChild(scoreElement);
+            
+            // Remove the element after animation completes
+            setTimeout(() => {
+                gameContainer.removeChild(scoreElement);
+            }, 1000);
+            
+            // Remove the target after animation completes
+            setTimeout(() => {
+                target.style.display = 'none';
+            }, 500);
+            
+            // In challenge mode, spawn a new target
+            if (gameMode === 'challenge') {
+                setTimeout(spawnRandomTarget, 500);
+            }
+            
+            updateScore();
+        }
+        
+        // Show penalty for missing
+        function showMissPenalty() {
+            const penaltyElement = document.createElement('div');
+            penaltyElement.className = 'miss-penalty';
+            penaltyElement.textContent = '-1';
+            
+            const containerRect = gameContainer.getBoundingClientRect();
+            
+            penaltyElement.style.left = `${containerRect.width/2 - 10}px`;
+            penaltyElement.style.top = `${containerRect.height/2 - 20}px`;
+            
+            gameContainer.appendChild(penaltyElement);
+            
+            // Remove the element after animation completes
+            setTimeout(() => {
+                gameContainer.removeChild(penaltyElement);
+            }, 1000);
+            
+            updateScore();
+        }
+        
+        // Reset ball after shot
+        function resetBallPosition() {
+            flyingBall.style.display = 'none';
+            ball.style.display = 'block';
+            isBallFlying = false;
+            power = 0;
+            powerMeter.style.width = '0%';
+            
+            // Show angle guide again
+            angleGuide.style.display = 'block';
+            angleValueDisplay.style.display = 'block';
+            updateAngleGuide(currentAngle);
+        }
+        
+        // Handle level completion
+        function completeLevel() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            levelScoreDisplay.textContent = `You scored ${levelScore} points this level.`;
+            levelCompletePanel.style.display = 'block';
+            resetBallPosition();
+        }
+        
+        // Challenge mode functions
+        function startChallengeMode() {
+            // Reset game state
+            score = 0;
+            level = 1;
+            challengeTimeLeft = 30;
+            challengeTargetsHit = 0;
+            updateScore();
+            
+            // Show challenge UI elements
+            timerDisplay.style.display = 'block';
+            challengeScoreDisplay.style.display = 'block';
+            levelDisplay.style.display = 'none';
+            levelCompletePanel.style.display = 'none';
+            
+            // Clear any existing targets
+            clearTargets();
+            
+            // Start timer
+            updateTimerDisplay();
+            challengeTimer = setInterval(updateChallengeTimer, 1000);
+            
+            // Start spawning targets
+            spawnRandomTarget();
+            targetSpawnInterval = setInterval(spawnRandomTarget, 1500); // Spawn every 1.5 seconds
+            
+            // Reset ball
+            resetBallPosition();
+        }
+        
+        function stopChallengeMode() {
+            clearInterval(challengeTimer);
+            clearInterval(targetSpawnInterval);
+            clearTargets();
+            
+            // Hide challenge UI elements
+            timerDisplay.style.display = 'none';
+            challengeScoreDisplay.style.display = 'none';
+            levelDisplay.style.display = 'block';
+        }
+        
+        function updateChallengeTimer() {
+            challengeTimeLeft--;
+            updateTimerDisplay();
+            
+            if (challengeTimeLeft <= 0) {
+                endChallengeMode();
+            }
+        }
+        
+        function updateTimerDisplay() {
+            timerDisplay.textContent = `Time: ${challengeTimeLeft}s`;
+        }
+        
+        function updateChallengeScore() {
+            challengeScoreDisplay.textContent = `Targets: ${challengeTargetsHit}`;
+        }
+        
+        function endChallengeMode() {
+            clearInterval(challengeTimer);
+            clearInterval(targetSpawnInterval);
+            
+            // Show final score
+            timerDisplay.textContent = "Time's up!";
+            challengeScoreDisplay.textContent = `Final Score: ${challengeTargetsHit} targets`;
+            
+            // Clear targets after a delay
+            setTimeout(clearTargets, 2000);
+        }
+        
+        function spawnRandomTarget() {
+            if (gameMode !== 'challenge') return;
+            
+            // Create a new target at random position
+            const target = document.createElement('div');
+            target.className = 'target';
+            
+            // Random position (within bounds)
+            const minRight = 150;
+            const maxRight = 600;
+            const minBottom = 50;
+            const maxBottom = 250;
+            
+            const rightPos = Math.floor(Math.random() * (maxRight - minRight)) + minRight;
+            const bottomPos = Math.floor(Math.random() * (maxBottom - minBottom)) + minBottom;
+            const size = Math.floor(Math.random() * 30) + 30; // Between 30-60px
+            
+            target.style.right = `${rightPos}px`;
+            target.style.bottom = `${bottomPos}px`;
+            target.style.width = `${size}px`;
+            target.style.height = `${size}px`;
+            target.dataset.hit = 'false';
+            
+            // 30% chance to be a moving target
+            if (Math.random() < 0.3) {
+                target.dataset.moving = 'true';
+                target.dataset.direction = Math.random() < 0.5 ? 'up' : 'down';
+                target.dataset.speed = (Math.random() * 2) + 1; // Random speed
+            } else {
+                target.dataset.moving = 'false';
+            }
+            
+            gameContainer.appendChild(target);
+            targets.push(target);
+            
+            // Animate moving targets in challenge mode
+            if (target.dataset.moving === 'true') {
+                moveTarget(target);
+            }
+        }
+        
+        function moveTarget(target) {
+            if (gameMode !== 'challenge' || target.dataset.hit === 'true') return;
+            
+            const currentBottom = parseInt(target.style.bottom);
+            const direction = target.dataset.direction;
+            const speed = parseFloat(target.dataset.speed);
+            
+            // Move target
+            if (direction === 'down') {
+                target.style.bottom = (currentBottom - speed) + 'px';
+                if (currentBottom - speed <= 20) {
+                    target.dataset.direction = 'up';
+                }
+            } else {
+                target.style.bottom = (currentBottom + speed) + 'px';
+                const containerHeight = CONTAINER_HEIGHT - parseInt(target.style.height) - 50;
+                if (currentBottom + speed >= containerHeight) {
+                    target.dataset.direction = 'down';
+                }
+            }
+            
+            // Continue animation if still in challenge mode
+            if (gameMode === 'challenge') {
+                requestAnimationFrame(() => moveTarget(target));
+            }
+        }
+        
+        function clearTargets() {
+            targets.forEach(target => {
+                if (target.parentNode) {
+                    gameContainer.removeChild(target);
+                }
+            });
+            targets = [];
+        }
+        
+        // Move to next level
+        nextLevelBtn.addEventListener('click', () => {
+            level++;
+            levelCompletePanel.style.display = 'none';
+            updateLevelDisplay();
+            setupLevel(level);
+        });
+        
+        // Reset game
+        resetBtn.addEventListener('click', resetGame);
+        
+        function resetGame() {
+            if (gameMode === 'challenge') {
+                stopChallengeMode();
+                startChallengeMode();
+            } else {
+                initGame();
+            }
+        }
+        
+        // Menu button functionality
+        menuBtn.addEventListener('click', () => {
+            window.location.href = 'menu.html';
+        });
+        
+        // Initialize game modes
+        campaignModeBtn.addEventListener('click', () => {
+            if (gameMode === 'challenge') {
+                stopChallengeMode();
+            }
+            gameMode = 'campaign';
+            campaignModeBtn.classList.add('active');
+            challengeModeBtn.classList.remove('active');
+            initGame();
+        });
+        
+        challengeModeBtn.addEventListener('click', () => {
+            if (gameMode === 'campaign') {
+                resetGame();
+            }
+            gameMode = 'challenge';
+            campaignModeBtn.classList.remove('active');
+            challengeModeBtn.classList.add('active');
+            startChallengeMode();
+        });
+        
+        // Initialize game on load
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
